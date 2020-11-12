@@ -4,6 +4,7 @@
   "description": "A relay for sending flashbots bundle to multiple miners",
   "scripts": {
     "start": "node server/main.js",
+    "lint": "eslint .",
     "miner-proxy": "node miner/proxy.js"
   },
   "repository": {
@@ -13,6 +14,9 @@
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/flashbots/mev-relay/issues"
+  },
+  "engines": {
+    "node": ">=12"
   },
   "homepage": "https://github.com/flashbots/mev-relay#readme",
   "dependencies": {

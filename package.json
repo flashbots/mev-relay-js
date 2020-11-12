@@ -1,0 +1,34 @@
+{
+  "name": "mev-relay",
+  "version": "1.0.0",
+  "description": "A relay for sending flashbots bundle to multiple miners",
+  "scripts": {
+    "start": "node server/main.js",
+    "miner-proxy": "node miner/proxy.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flashbots/mev-relay.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/flashbots/mev-relay/issues"
+  },
+  "homepage": "https://github.com/flashbots/mev-relay#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "lodash": "^4.17.20",
+    "request": "^2.88.2"
+  },
+  "devDependencies": {
+    "eslint": "^7.13.0",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-config-standard": "^16.0.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-promise": "^4.2.1",
+    "prettier": "^2.1.2"
+  }
+}

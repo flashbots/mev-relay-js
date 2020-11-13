@@ -72,7 +72,7 @@ app.use(async (req, res) => {
     }
   })
 
-  const responses = Promise.all(requests)
+  const responses = await Promise.all(requests)
 
   responses.forEach((response, i) => {
     if (!response.ok) {

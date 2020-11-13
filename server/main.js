@@ -80,7 +80,8 @@ app.use(async (req, res) => {
     }
   })
 
-  res.end('TODO')
+  res.setHeader('Content-Type', 'application/json')
+  res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)
 })
 
 app.listen(PORT, () => {

@@ -16,7 +16,7 @@
     "url": "https://github.com/flashbots/mev-relay/issues"
   },
   "engines": {
-    "node": ">=12"
+    "node": ">=10"
   },
   "homepage": "https://github.com/flashbots/mev-relay#readme",
   "dependencies": {

@@ -2,6 +2,8 @@
 const express = require('express')
 const bodyParser = require('body-parser')
 const fetch = require('node-fetch')
+const morgan = require('morgan')
+const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
 
 const ALLOWED_METHODS = ['eth_sendBundle']
@@ -39,6 +41,13 @@ if (!validPort(PORT)) {
 
 const app = express()
 app.use(bodyParser.json())
+app.use(morgan('combined'))
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10 // limit each IP to 10 requests per windowMs
+  })
+)
 
 app.use(async (req, res) => {
   if (!req.body) {

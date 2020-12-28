@@ -83,11 +83,13 @@ app.use(async (req, res) => {
 
   const responses = await Promise.all(requests)
 
-  responses.forEach((response, i) => {
+  for (let i = 0; i < responses.length; i++) {
+    const response = responses[i]
     if (!response.ok) {
-      console.error(`http error calling miner ${MINERS[i]} with status ${response.status}`)
+      const text = await response.text()
+      console.error(`http error calling miner ${MINERS[i]} with status ${response.status} and text: ${text}`)
     }
-  })
+  }
 
   res.setHeader('Content-Type', 'application/json')
   res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)

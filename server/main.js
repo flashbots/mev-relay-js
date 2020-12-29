@@ -5,6 +5,14 @@ const fetch = require('node-fetch')
 const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
+const Sentry = require('@sentry/node')
+
+if (process.env.SENTRY_DSN) {
+  console.log('initializing sentry')
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN
+  })
+}
 
 const ALLOWED_METHODS = ['eth_sendBundle']
 
@@ -50,49 +58,62 @@ app.use(
 )
 
 app.use(async (req, res) => {
-  if (!req.body) {
-    res.writeHead(400)
-    res.end('invalid json body')
-    return
-  }
-  if (!req.body.method) {
-    res.writeHead(400)
-    res.end('missing method')
-    return
-  }
-  if (!_.includes(ALLOWED_METHODS, req.body.method)) {
-    res.writeHead(400)
-    res.end(`invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
-    return
-  }
+  try {
+    if (!req.body) {
+      res.writeHead(400)
+      res.end('invalid json body')
+      return
+    }
+    if (!req.body.method) {
+      res.writeHead(400)
+      res.end('missing method')
+      return
+    }
+    if (!_.includes(ALLOWED_METHODS, req.body.method)) {
+      res.writeHead(400)
+      res.end(`invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
+      return
+    }
 
-  const requests = []
-  MINERS.forEach((minerUrl) => {
+    const requests = []
+    MINERS.forEach((minerUrl) => {
+      try {
+        requests.push(
+          fetch(`${minerUrl}`, {
+            method: 'post',
+            body: JSON.stringify(req.body),
+            headers: { 'Content-Type': 'application/json' }
+          })
+        )
+      } catch (error) {
+        Sentry.captureException(error)
+        console.error('Error calling miner', minerUrl, error)
+      }
+    })
+
+    const responses = await Promise.all(requests)
+
+    for (let i = 0; i < responses.length; i++) {
+      const response = responses[i]
+      if (!response.ok) {
+        const text = await response.text()
+        console.error(`http error calling miner ${MINERS[i]} with status ${response.status} and text: ${text}`)
+      }
+    }
+
+    res.setHeader('Content-Type', 'application/json')
+    res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)
+  } catch (error) {
+    Sentry.captureException(error)
+    console.error(`error in handler: ${error}`)
     try {
-      requests.push(
-        fetch(`${minerUrl}`, {
-          method: 'post',
-          body: JSON.stringify(req.body),
-          headers: { 'Content-Type': 'application/json' }
-        })
-      )
-    } catch (error) {
-      console.error('Error calling miner', minerUrl, error)
-    }
-  })
-
-  const responses = await Promise.all(requests)
-
-  for (let i = 0; i < responses.length; i++) {
-    const response = responses[i]
-    if (!response.ok) {
-      const text = await response.text()
-      console.error(`http error calling miner ${MINERS[i]} with status ${response.status} and text: ${text}`)
+      res.status(500)
+      res.end('internal server error')
+    } catch (error2) {
+      Sentry.captureException(error2)
+      console.error(`error in error response: ${error2}`)
     }
   }
-
-  res.setHeader('Content-Type', 'application/json')
-  res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)
 })
 
 app.listen(PORT, () => {

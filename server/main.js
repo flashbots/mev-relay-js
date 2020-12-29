@@ -6,6 +6,8 @@ const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
 const Sentry = require('@sentry/node')
+const promBundle = require('express-prom-bundle')
+const { sumBundleGasLimit } = require('./bundle')
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -48,6 +50,21 @@ if (!validPort(PORT)) {
 }
 
 const app = express()
+const metricsRequestMiddleware = promBundle({
+  includePath: true,
+  includeMethod: true,
+  autoregister: false, // Do not register /metrics
+  promClient: {
+    collectDefaultMetrics: {}
+  }
+})
+const { promClient, metricsMiddleware } = metricsRequestMiddleware
+
+// Metrics app to expose /metrics endpoint
+const metricsApp = express()
+metricsApp.use(metricsMiddleware)
+
+app.use(metricsRequestMiddleware)
 app.use(bodyParser.json())
 app.use(morgan('combined'))
 app.use(
@@ -56,6 +73,16 @@ app.use(
     max: 30 // limit each IP to 30 requests per windowMs
   })
 )
+const bundleCounter = new promClient.Counter({
+  name: 'bundles',
+  help: '# of bundles received'
+})
+
+const gasHist = new promClient.Histogram({
+  name: 'gas_limit',
+  help: 'Histogram of gas limit in bundles',
+  buckets: [22000, 50000, 100000, 150000, 200000, 300000, 400000, 500000, 750000, 1000000, 1250000, 1500000, 2000000, 3000000]
+})
 
 app.use(async (req, res) => {
   try {
@@ -73,6 +100,24 @@ app.use(async (req, res) => {
       res.writeHead(400)
       res.end(`invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
       return
+    }
+    if (req.body.method === 'eth_sendBundle') {
+      if (!req.body.params || !req.body.params[0]) {
+        res.writeHead(400)
+        res.end('missing params')
+        return
+      }
+      bundleCounter.inc()
+      const bundle = req.body.params[0]
+      try {
+        const gasSum = sumBundleGasLimit(bundle)
+        gasHist.observe(gasSum)
+      } catch (error) {
+        console.error(`error decoding bundle: ${error}`)
+        res.writeHead(400)
+        res.end('unable to decode txs')
+        return
+      }
     }
 
     const requests = []
@@ -107,7 +152,7 @@ app.use(async (req, res) => {
     Sentry.captureException(error)
     console.error(`error in handler: ${error}`)
     try {
-      res.status(500)
+      res.writeHead(500)
       res.end('internal server error')
     } catch (error2) {
       Sentry.captureException(error2)
@@ -117,5 +162,7 @@ app.use(async (req, res) => {
 })
 
 app.listen(PORT, () => {
+  metricsApp.listen(9090)
+
   console.log(`relay listening at ${PORT}`)
 })

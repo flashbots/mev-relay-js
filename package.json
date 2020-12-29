@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/flashbots/mev-relay#readme",
   "dependencies": {
+    "@sentry/node": "^5.29.2",
     "body-parser": "^1.19.0",
     "express": "^4.17.1",
     "express-rate-limit": "^5.2.3",

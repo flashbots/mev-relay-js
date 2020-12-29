@@ -119,6 +119,7 @@ app.use(async (req, res) => {
         return
       }
     }
+    console.log(`request body: ${req.body}`)
 
     const requests = []
     MINERS.forEach((minerUrl) => {

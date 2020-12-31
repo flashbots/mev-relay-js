@@ -70,7 +70,7 @@ app.use(morgan('combined'))
 app.use(
   rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 30 // limit each IP to 30 requests per windowMs
+    max: 60 // limit each IP to this many requests
   })
 )
 const bundleCounter = new promClient.Counter({

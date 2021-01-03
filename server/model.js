@@ -6,7 +6,7 @@ const pbkdf2 = util.promisify(crypto.pbkdf2)
 
 const Users = dynamoose.model(
   'RelayUsers',
-  new dynamoose.Schema({ username: String, apikey: { type: String, index: { global: true } }, salt: String, address: String })
+  new dynamoose.Schema({ username: String, hashedApiKey: { type: String, index: { global: true } }, salt: String, address: String })
 )
 
 function generateSalt() {

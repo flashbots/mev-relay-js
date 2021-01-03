@@ -12,7 +12,7 @@ async function main() {
     const user = new Users({
       username: process.argv[3],
       hashedApiKey: await hashPass(process.argv[4], salt),
-      address: process.argv[5],
+      email: process.argv[5],
       salt: salt
     })
     console.log(await user.save())
@@ -25,6 +25,8 @@ async function main() {
     console.log((await Users.scan().all().exec()).toJSON())
   } else if (command === 'getByUsername') {
     console.log(await Users.get(process.argv[3]))
+  } else if (command === 'getByEmail') {
+    console.log(await Users.query('email').eq(process.argv[3]).exec())
   } else {
     console.error('unknown command')
     process.exit(1)

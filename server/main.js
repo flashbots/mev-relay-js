@@ -100,7 +100,7 @@ app.use(async (req, res, next) => {
       res.end('invalid Authorization token')
       return
     }
-    if ((await hashPass(key, user.salt)) !== user.apikey) {
+    if ((await hashPass(key, user.salt)) !== user.hashedApiKey) {
       res.writeHead(403)
       res.end('invalid Authorization token')
       return

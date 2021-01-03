@@ -11,7 +11,7 @@ async function main() {
     const salt = generateSalt()
     const user = new Users({
       username: process.argv[3],
-      apikey: await hashPass(process.argv[4], salt),
+      hashedApiKey: await hashPass(process.argv[4], salt),
       address: process.argv[5],
       salt: salt
     })
@@ -19,14 +19,12 @@ async function main() {
   } else if (command === 'update') {
     const user = (await Users.query('username').eq(process.argv[3]).exec())[0]
     user.salt = generateSalt()
-    user.apikey = await hashPass(process.argv[4], user.salt)
+    user.hashedApiKey = await hashPass(process.argv[4], user.salt)
     console.log(await user.save())
   } else if (command === 'scan') {
     console.log((await Users.scan().all().exec()).toJSON())
   } else if (command === 'getByUsername') {
     console.log(await Users.get(process.argv[3]))
-  } else if (command === 'getByApiKey') {
-    console.log(await Users.query('apikey').eq(process.argv[3]).exec())
   } else {
     console.error('unknown command')
     process.exit(1)

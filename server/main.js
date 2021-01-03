@@ -8,6 +8,7 @@ const _ = require('lodash')
 const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
 const { sumBundleGasLimit } = require('./bundle')
+const { Users } = require('./model')
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -86,6 +87,17 @@ const gasHist = new promClient.Histogram({
 
 app.use(async (req, res) => {
   try {
+    let auth = req.header('Authorization')
+    auth = _.trimStart(auth, 'Bearer ')
+
+    const results = await Users.query('apikey').eq(auth).exec()
+
+    if (results.length !== 1) {
+      res.writeHead(403)
+      res.end('invalid Authorization token')
+      return
+    }
+
     if (!req.body) {
       res.writeHead(400)
       res.end('invalid json body')

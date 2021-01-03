@@ -66,14 +66,58 @@ const metricsApp = express()
 metricsApp.use(metricsMiddleware)
 
 app.use(metricsRequestMiddleware)
-app.use(bodyParser.json())
 app.use(morgan('combined'))
 app.use(
   rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 60 // limit each IP to this many requests
+    max: 10,
+    keyGenerator: (req) => {
+      return req.header('Authorization')
+    }
   })
 )
+app.use(async (req, res, next) => {
+  try {
+    let auth = req.header('Authorization')
+    if (_.startsWith(auth, 'Bearer ')) {
+      auth = auth.slice(7)
+    }
+
+    const results = await Users.query('apikey').eq(auth).exec()
+
+    console.log(results, req.header('Authorization'), auth)
+    if (results.length !== 1) {
+      res.writeHead(403)
+      res.end('invalid Authorization token')
+      return
+    }
+    next()
+  } catch (error) {
+    Sentry.captureException(error)
+    console.error('error in auth middleware', error)
+    try {
+      res.writeHead(500)
+      res.end('internal server error')
+    } catch (error2) {
+      Sentry.captureException(error2)
+      console.error(`error in error response: ${error2}`)
+    }
+  }
+})
+// the 2nd rate limit will match all requests that get through the above
+// middleware, so this becomes a global rate limit that only applies to valid
+// requests
+app.use(
+  rateLimit({
+    windowMs: 15 * 1000,
+    max: 30,
+    keyGenerator: () => {
+      return ''
+    }
+  })
+)
+app.use(bodyParser.json())
+
 const bundleCounter = new promClient.Counter({
   name: 'bundles',
   help: '# of bundles received'
@@ -87,17 +131,6 @@ const gasHist = new promClient.Histogram({
 
 app.use(async (req, res) => {
   try {
-    let auth = req.header('Authorization')
-    auth = _.trimStart(auth, 'Bearer ')
-
-    const results = await Users.query('apikey').eq(auth).exec()
-
-    if (results.length !== 1) {
-      res.writeHead(403)
-      res.end('invalid Authorization token')
-      return
-    }
-
     if (!req.body) {
       res.writeHead(400)
       res.end('invalid json body')

@@ -8,7 +8,7 @@ const _ = require('lodash')
 const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
 const { sumBundleGasLimit } = require('./bundle')
-const { Users } = require('./model')
+const { Users, hashPass } = require('./model')
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -83,10 +83,24 @@ app.use(async (req, res, next) => {
       auth = auth.slice(7)
     }
 
-    const results = await Users.query('apikey').eq(auth).exec()
+    auth = _.split(auth, '.')
+    if (auth.length !== 2) {
+      res.writeHead(403)
+      res.end('invalid Authorization token')
+      return
+    }
 
-    console.log(results, req.header('Authorization'), auth)
-    if (results.length !== 1) {
+    const username = auth[0]
+    const key = auth[1]
+
+    const user = await Users.get(username)
+
+    if (!user) {
+      res.writeHead(403)
+      res.end('invalid Authorization token')
+      return
+    }
+    if ((await hashPass(key, user.salt)) !== user.apikey) {
       res.writeHead(403)
       res.end('invalid Authorization token')
       return

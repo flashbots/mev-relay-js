@@ -83,7 +83,7 @@ app.use(async (req, res, next) => {
       auth = auth.slice(7)
     }
 
-    auth = _.split(auth, '.')
+    auth = _.split(auth, ':')
     if (auth.length !== 2) {
       res.writeHead(403)
       res.end('invalid Authorization token')
@@ -93,14 +93,16 @@ app.use(async (req, res, next) => {
     const username = auth[0]
     const key = auth[1]
 
-    const user = await Users.get(username)
+    const users = await Users.query('accessKey').eq(username).exec()
+    const user = users[0]
+    console.log('user', user)
 
     if (!user) {
       res.writeHead(403)
       res.end('invalid Authorization token')
       return
     }
-    if ((await hashPass(key, user.salt)) !== user.hashedApiKey) {
+    if ((await hashPass(key, user.salt)) !== user.hashedSecretKey) {
       res.writeHead(403)
       res.end('invalid Authorization token')
       return

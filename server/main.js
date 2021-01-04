@@ -10,6 +10,8 @@ const promBundle = require('express-prom-bundle')
 const { sumBundleGasLimit } = require('./bundle')
 const { Users, hashPass } = require('./model')
 
+const MAX_GAS_BUNDLE = 3000000
+
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
   Sentry.init({
@@ -79,7 +81,7 @@ app.use(async (req, res, next) => {
 app.use(
   rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 10,
+    max: 15,
     keyGenerator: (req) => {
       return req.header('Authorization')
     }
@@ -134,7 +136,7 @@ app.use(async (req, res, next) => {
 app.use(
   rateLimit({
     windowMs: 15 * 1000,
-    max: 30,
+    max: 60,
     keyGenerator: () => {
       return ''
     }
@@ -181,6 +183,16 @@ app.use(async (req, res) => {
       try {
         const gasSum = sumBundleGasLimit(bundle)
         gasHist.observe(gasSum)
+
+        if (gasSum > MAX_GAS_BUNDLE) {
+          res.writeHead(400)
+          res.end('gas limit of bundle exceeds', MAX_GAS_BUNDLE)
+          return
+        } else if (gasSum === 0) {
+          res.writeHead(400)
+          res.end('bundle spends no gas')
+          return
+        }
       } catch (error) {
         console.error(`error decoding bundle: ${error}`)
         res.writeHead(400)

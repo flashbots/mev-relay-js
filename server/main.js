@@ -67,6 +67,15 @@ metricsApp.use(metricsMiddleware)
 
 app.use(metricsRequestMiddleware)
 app.use(morgan('combined'))
+app.use(async (req, res, next) => {
+  const auth = req.header('Authorization')
+  if (!auth) {
+    res.writeHead(403)
+    res.end('missing Authorization header')
+    return
+  }
+  next()
+})
 app.use(
   rateLimit({
     windowMs: 60 * 1000, // 1 minute

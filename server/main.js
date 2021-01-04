@@ -95,7 +95,6 @@ app.use(async (req, res, next) => {
 
     const users = await Users.query('accessKey').eq(username).exec()
     const user = users[0]
-    console.log('user', user)
 
     if (!user) {
       res.writeHead(403)

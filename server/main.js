@@ -93,7 +93,7 @@ app.use(async (req, res, next) => {
     const username = auth[0]
     const key = auth[1]
 
-    const users = await Users.query('accessKey').eq(username).exec()
+    const users = await Users.query('keyID').eq(username).exec()
     const user = users[0]
 
     if (!user) {

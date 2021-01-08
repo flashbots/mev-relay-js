@@ -52,6 +52,11 @@ if (!validPort(PORT)) {
   process.exit(1)
 }
 
+function writeError(res, statusCode, errMsg) {
+  res.status(statusCode)
+  res.json({ error: { message: errMsg } })
+}
+
 const app = express()
 const metricsRequestMiddleware = promBundle({
   includePath: true,
@@ -72,8 +77,7 @@ app.use(morgan('combined'))
 app.use(async (req, res, next) => {
   const auth = req.header('Authorization')
   if (!auth) {
-    res.writeHead(403)
-    res.end('missing Authorization header')
+    writeError(res, 403, 'missing Authorization header')
     return
   }
   next()
@@ -96,8 +100,7 @@ app.use(async (req, res, next) => {
 
     auth = _.split(auth, ':')
     if (auth.length !== 2) {
-      res.writeHead(403)
-      res.end('invalid Authorization token')
+      writeError(res, 403, 'invalid Authorization token')
       return
     }
 
@@ -108,13 +111,11 @@ app.use(async (req, res, next) => {
     const user = users[0]
 
     if (!user) {
-      res.writeHead(403)
-      res.end('invalid Authorization token')
+      writeError(res, 403, 'invalid Authorization token')
       return
     }
     if ((await hashPass(key, user.salt)) !== user.hashedSecretKey) {
-      res.writeHead(403)
-      res.end('invalid Authorization token')
+      writeError(res, 403, 'invalid Authorization token')
       return
     }
     next()
@@ -122,8 +123,7 @@ app.use(async (req, res, next) => {
     Sentry.captureException(error)
     console.error('error in auth middleware', error)
     try {
-      res.writeHead(500)
-      res.end('internal server error')
+      writeError(res, 403, 'internal server error')
     } catch (error2) {
       Sentry.captureException(error2)
       console.error(`error in error response: ${error2}`)
@@ -158,24 +158,20 @@ const gasHist = new promClient.Histogram({
 app.use(async (req, res) => {
   try {
     if (!req.body) {
-      res.writeHead(400)
-      res.end('invalid json body')
+      writeError(res, 400, 'invalid json body')
       return
     }
     if (!req.body.method) {
-      res.writeHead(400)
-      res.end('missing method')
+      writeError(res, 400, 'missing method')
       return
     }
     if (!_.includes(ALLOWED_METHODS, req.body.method)) {
-      res.writeHead(400)
-      res.end(`invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
+      writeError(res, 400, `invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
       return
     }
     if (req.body.method === 'eth_sendBundle') {
       if (!req.body.params || !req.body.params[0]) {
-        res.writeHead(400)
-        res.end('missing params')
+        writeError(res, 400, 'missing params')
         return
       }
       bundleCounter.inc()
@@ -185,18 +181,15 @@ app.use(async (req, res) => {
         gasHist.observe(gasSum)
 
         if (gasSum > MAX_GAS_BUNDLE) {
-          res.writeHead(400)
-          res.end('gas limit of bundle exceeds', MAX_GAS_BUNDLE)
+          writeError(res, 400, 'gas limit of bundle exceeds', MAX_GAS_BUNDLE)
           return
         } else if (gasSum === 0) {
-          res.writeHead(400)
-          res.end('bundle spends no gas')
+          writeError(res, 400, 'bundle spends no gas')
           return
         }
       } catch (error) {
         console.error(`error decoding bundle: ${error}`)
-        res.writeHead(400)
-        res.end('unable to decode txs')
+        writeError(res, 400, 'unable to decode txs')
         return
       }
     }
@@ -224,8 +217,7 @@ app.use(async (req, res) => {
     Sentry.captureException(error)
     console.error(`error in handler: ${error}`)
     try {
-      res.writeHead(500)
-      res.end('internal server error')
+      writeError(res, 500, 'internal server error')
     } catch (error2) {
       Sentry.captureException(error2)
       console.error(`error in error response: ${error2}`)

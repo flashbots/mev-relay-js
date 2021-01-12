@@ -24,6 +24,8 @@ async function main() {
     console.log(await Users.query('email').eq(process.argv[3]).exec())
   } else if (command === 'getByKeyID') {
     console.log(await Users.query('keyID').eq(process.argv[3]).exec())
+  } else if (command === 'getByShortKeyID') {
+    console.log(await Users.scan('keyID').beginsWith(process.argv[3]).exec())
   } else {
     console.error('unknown command')
     process.exit(1)

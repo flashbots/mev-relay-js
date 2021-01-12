@@ -91,6 +91,22 @@ app.use(
     }
   })
 )
+const UNIQUE_USER_COUNT = {}
+
+const bundleCounterPerUser = new promClient.Counter({
+  name: 'relay_bundles_per_user',
+  help: '# of bundles received per user',
+  labelNames: ['username']
+})
+// eslint-disable-next-line no-unused-vars
+const uniqueUserGauge = new promClient.Gauge({
+  name: 'relay_unique_user',
+  help: 'unique user keys in relay',
+  collect() {
+    this.set(Object.keys(UNIQUE_USER_COUNT).length)
+  }
+})
+
 app.use(async (req, res, next) => {
   try {
     let auth = req.header('Authorization')
@@ -118,6 +134,12 @@ app.use(async (req, res, next) => {
       writeError(res, 403, 'invalid Authorization token')
       return
     }
+    let count = UNIQUE_USER_COUNT[username]
+    if (!count) {
+      count = 0
+    }
+    UNIQUE_USER_COUNT[username] = count + 1
+    bundleCounterPerUser.inc({ username: username.slice(0, 8) })
     next()
   } catch (error) {
     Sentry.captureException(error)

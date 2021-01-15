@@ -10,8 +10,6 @@ const promBundle = require('express-prom-bundle')
 const { sumBundleGasLimit } = require('./bundle')
 const { Users, hashPass } = require('./model')
 
-const MAX_GAS_BUNDLE = 3000000
-
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
   Sentry.init({
@@ -201,14 +199,6 @@ app.use(async (req, res) => {
       try {
         const gasSum = sumBundleGasLimit(bundle)
         gasHist.observe(gasSum)
-
-        if (gasSum > MAX_GAS_BUNDLE) {
-          writeError(res, 400, 'gas limit of bundle exceeds', MAX_GAS_BUNDLE)
-          return
-        } else if (gasSum === 0) {
-          writeError(res, 400, 'bundle spends no gas')
-          return
-        }
       } catch (error) {
         console.error(`error decoding bundle: ${error}`)
         writeError(res, 400, 'unable to decode txs')

@@ -56,6 +56,7 @@ function writeError(res, statusCode, errMsg) {
 }
 
 const app = express()
+app.set('trust proxy', true)
 const metricsRequestMiddleware = promBundle({
   includePath: true,
   includeMethod: true,
@@ -86,6 +87,15 @@ app.use(
     max: 15,
     keyGenerator: (req) => {
       return req.header('Authorization')
+    },
+    onLimitReached: (req) => {
+      let auth = req.header('Authorization')
+      if (_.startsWith(auth, 'Bearer ')) {
+        auth = auth.slice(7)
+      }
+      auth = auth.slice(0, 8)
+
+      console.log(`rate limit reached for auth: ${auth} ${req.ip}`)
     }
   })
 )
@@ -159,6 +169,9 @@ app.use(
     max: 60,
     keyGenerator: () => {
       return ''
+    },
+    onLimitReached: (req) => {
+      console.log('rate limit reached for global')
     }
   })
 )

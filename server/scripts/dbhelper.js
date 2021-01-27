@@ -10,14 +10,16 @@ async function main() {
   if (command === 'create') {
     const salt = generateSalt()
     const secretKey = generateSecretKey()
+    const keyID = generateKeyID()
     const user = new Users({
       email: process.argv[3],
-      keyID: generateKeyID(),
+      keyID,
       hashedSecretKey: await hashPass(secretKey, salt),
       salt: salt
     })
-    console.log(await user.save())
-    console.log('SECRET KEY:', secretKey)
+    await user.save()
+    console.log(`FLASHBOTS_KEY_ID=${keyID}`)
+    console.log(`FLASHBOTS_SECRET=${secretKey}`)
   } else if (command === 'scan') {
     console.log((await Users.scan().all().exec()).toJSON())
   } else if (command === 'getByEmail') {

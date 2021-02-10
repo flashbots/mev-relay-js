@@ -8,7 +8,7 @@ const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
 const { sumBundleGasLimit } = require('./bundle')
 const { Users, hashPass } = require('./model')
-const { handleSendBundle, handleCallBundle } = require('./handlers')
+const { Handler } = require('./handlers')
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -207,6 +207,8 @@ const gasHist = new promClient.Histogram({
   buckets: [22000, 50000, 100000, 150000, 200000, 300000, 400000, 500000, 750000, 1000000, 1250000, 1500000, 2000000, 3000000]
 })
 
+const handler = new Handler(MINERS, SIMULATION_RPC)
+
 app.use(async (req, res) => {
   try {
     console.log(`request body: ${JSON.stringify(req.body)}`)
@@ -226,10 +228,18 @@ app.use(async (req, res) => {
         writeError(res, 400, 'unable to decode txs')
         return
       }
+      if (!req.body.params[1]) {
+        writeError(res, 400, 'missing block param')
+        return
+      }
+      if (!req.body.params[1].slice(0, 2) !== '0x') {
+        writeError(res, 400, 'block param must be a hex int')
+        return
+      }
 
-      await handleSendBundle(req, res, MINERS)
+      await handler.handleSendBundle(req, res, MINERS)
     } else if (req.body.method === 'eth_callBundle') {
-      await handleCallBundle(req, res, SIMULATION_RPC)
+      await handler.handleCallBundle(req, res, SIMULATION_RPC)
     } else {
       const err = `unknown method: ${req.body.method}`
       Sentry.captureException(err)

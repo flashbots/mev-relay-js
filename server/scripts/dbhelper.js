@@ -22,6 +22,12 @@ async function main() {
     console.log(`FLASHBOTS_SECRET=${secretKey}`)
   } else if (command === 'scan') {
     console.log((await Users.scan().all().exec()).toJSON())
+  } else if (command === 'dump') {
+    const users = await Users.scan().all().exec()
+    console.log('email,shortKey')
+    users.forEach((element) => {
+      console.log(`${element.email},${element.keyID.slice(0, 8)}`)
+    })
   } else if (command === 'getByEmail') {
     console.log(await Users.query('email').eq(process.argv[3]).exec())
   } else if (command === 'getByKeyID') {

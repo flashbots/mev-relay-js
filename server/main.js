@@ -1,7 +1,6 @@
 // A simple server that proxies only specific methods to an Ethereum JSON-RPC
 const express = require('express')
 const bodyParser = require('body-parser')
-const fetch = require('node-fetch')
 const morgan = require('morgan')
 const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
@@ -9,6 +8,7 @@ const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
 const { sumBundleGasLimit } = require('./bundle')
 const { Users, hashPass } = require('./model')
+const { handleSendBundle, handleCallBundle } = require('./handlers')
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -17,10 +17,10 @@ if (process.env.SENTRY_DSN) {
   })
 }
 
-const ALLOWED_METHODS = ['eth_sendBundle']
+const ALLOWED_METHODS = ['eth_sendBundle', 'eth_callBundle']
 
 function help() {
-  console.log('node ./server/main.js minerUrlS [PORT]')
+  console.log('node ./server/main.js minerUrls simulationRpc [PORT]')
 }
 
 function validPort(port) {
@@ -43,7 +43,14 @@ if (MINERS.length === 0) {
   process.exit(1)
 }
 
-const PORT = parseInt(_.get(process.argv, '[3]', '18545'))
+const SIMULATION_RPC = process.argv[3]
+if (!SIMULATION_RPC) {
+  console.error('invalid simulation rpc provided')
+  help()
+  process.exit(1)
+}
+
+const PORT = parseInt(_.get(process.argv, '[4]', '18545'))
 
 if (!validPort(PORT)) {
   console.error(`invalid port specified for PORT: ${PORT}`)
@@ -73,10 +80,23 @@ metricsApp.use(metricsMiddleware)
 
 app.use(metricsRequestMiddleware)
 app.use(morgan('combined'))
+app.use(bodyParser.json())
 app.use(async (req, res, next) => {
   const auth = req.header('Authorization')
   if (!auth) {
     writeError(res, 403, 'missing Authorization header')
+    return
+  }
+  if (!req.body) {
+    writeError(res, 400, 'invalid json body')
+    return
+  }
+  if (!req.body.method) {
+    writeError(res, 400, 'missing method')
+    return
+  }
+  if (!_.includes(ALLOWED_METHODS, req.body.method)) {
+    writeError(res, 400, `invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
     return
   }
   next()
@@ -86,7 +106,7 @@ app.use(
     windowMs: 60 * 1000, // 1 minute
     max: 15,
     keyGenerator: (req) => {
-      return req.header('Authorization')
+      return `${req.body.method}-${req.header('Authorization')}`
     },
     onLimitReached: (req) => {
       let auth = req.header('Authorization')
@@ -95,7 +115,7 @@ app.use(
       }
       auth = auth.slice(0, 8)
 
-      console.log(`rate limit reached for auth: ${auth} ${req.ip}`)
+      console.log(`rate limit reached for auth: ${auth} ${req.body.method} ${req.ip}`)
     }
   })
 )
@@ -175,7 +195,6 @@ app.use(
     }
   })
 )
-app.use(bodyParser.json())
 
 const bundleCounter = new promClient.Counter({
   name: 'bundles',
@@ -190,18 +209,8 @@ const gasHist = new promClient.Histogram({
 
 app.use(async (req, res) => {
   try {
-    if (!req.body) {
-      writeError(res, 400, 'invalid json body')
-      return
-    }
-    if (!req.body.method) {
-      writeError(res, 400, 'missing method')
-      return
-    }
-    if (!_.includes(ALLOWED_METHODS, req.body.method)) {
-      writeError(res, 400, `invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
-      return
-    }
+    console.log(`request body: ${JSON.stringify(req.body)}`)
+
     if (req.body.method === 'eth_sendBundle') {
       if (!req.body.params || !req.body.params[0]) {
         writeError(res, 400, 'missing params')
@@ -217,27 +226,16 @@ app.use(async (req, res) => {
         writeError(res, 400, 'unable to decode txs')
         return
       }
+
+      await handleSendBundle(req, res, MINERS)
+    } else if (req.body.method === 'eth_callBundle') {
+      await handleCallBundle(req, res, SIMULATION_RPC)
+    } else {
+      const err = `unknown method: ${req.body.method}`
+      Sentry.captureException(err)
+      console.error(err)
+      writeError(res, 400, err)
     }
-    console.log(`request body: ${JSON.stringify(req.body)}`)
-
-    const requests = []
-    MINERS.forEach((minerUrl) => {
-      try {
-        requests.push(
-          fetch(`${minerUrl}`, {
-            method: 'post',
-            body: JSON.stringify(req.body),
-            headers: { 'Content-Type': 'application/json' }
-          })
-        )
-      } catch (error) {
-        Sentry.captureException(error)
-        console.error('Error calling miner', minerUrl, error)
-      }
-    })
-
-    res.setHeader('Content-Type', 'application/json')
-    res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)
   } catch (error) {
     Sentry.captureException(error)
     console.error(`error in handler: ${error}`)
@@ -248,6 +246,10 @@ app.use(async (req, res) => {
       console.error(`error in error response: ${error2}`)
     }
   }
+})
+process.on('unhandledRejection', (err) => {
+  Sentry.captureException(err)
+  console.error(`unhandled rejection: ${err}`)
 })
 
 app.listen(PORT, () => {

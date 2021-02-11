@@ -6,9 +6,9 @@ const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
 const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
-const { sumBundleGasLimit } = require('./bundle')
 const { Users, hashPass } = require('./model')
 const { Handler } = require('./handlers')
+const { writeError } = require('./utils')
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -20,7 +20,7 @@ if (process.env.SENTRY_DSN) {
 const ALLOWED_METHODS = ['eth_sendBundle', 'eth_callBundle']
 
 function help() {
-  console.log('node ./server/main.js minerUrls simulationRpc [PORT]')
+  console.log('node ./server/main.js minerUrls simulationRpc sqsUrl [PORT]')
 }
 
 function validPort(port) {
@@ -50,16 +50,18 @@ if (!SIMULATION_RPC) {
   process.exit(1)
 }
 
-const PORT = parseInt(_.get(process.argv, '[4]', '18545'))
+const SQS_URL = process.argv[4]
+if (!SIMULATION_RPC) {
+  console.error('invalid simulation rpc provided')
+  help()
+  process.exit(1)
+}
+
+const PORT = parseInt(_.get(process.argv, '[5]', '18545'))
 
 if (!validPort(PORT)) {
   console.error(`invalid port specified for PORT: ${PORT}`)
   process.exit(1)
-}
-
-function writeError(res, statusCode, errMsg) {
-  res.status(statusCode)
-  res.json({ error: { message: errMsg } })
 }
 
 const app = express()
@@ -148,26 +150,28 @@ app.use(async (req, res, next) => {
       return
     }
 
-    const username = auth[0]
-    const key = auth[1]
+    const keyID = auth[0]
+    const secretKey = auth[1]
 
-    const users = await Users.query('keyID').eq(username).exec()
+    const users = await Users.query('keyID').eq(keyID).exec()
     const user = users[0]
 
     if (!user) {
       writeError(res, 403, 'invalid Authorization token')
       return
     }
-    if ((await hashPass(key, user.salt)) !== user.hashedSecretKey) {
+    if ((await hashPass(secretKey, user.salt)) !== user.hashedSecretKey) {
       writeError(res, 403, 'invalid Authorization token')
       return
     }
-    let count = UNIQUE_USER_COUNT[username]
+    let count = UNIQUE_USER_COUNT[keyID]
     if (!count) {
       count = 0
     }
-    UNIQUE_USER_COUNT[username] = count + 1
-    bundleCounterPerUser.inc({ username: username.slice(0, 8) })
+    UNIQUE_USER_COUNT[keyID] = count + 1
+    bundleCounterPerUser.inc({ username: keyID.slice(0, 8) })
+
+    req.user = { keyID }
     next()
   } catch (error) {
     Sentry.captureException(error)
@@ -196,50 +200,16 @@ app.use(
   })
 )
 
-const bundleCounter = new promClient.Counter({
-  name: 'bundles',
-  help: '# of bundles received'
-})
-
-const gasHist = new promClient.Histogram({
-  name: 'gas_limit',
-  help: 'Histogram of gas limit in bundles',
-  buckets: [22000, 50000, 100000, 150000, 200000, 300000, 400000, 500000, 750000, 1000000, 1250000, 1500000, 2000000, 3000000]
-})
-
-const handler = new Handler(MINERS, SIMULATION_RPC)
+const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, promClient)
 
 app.use(async (req, res) => {
   try {
     console.log(`request body: ${JSON.stringify(req.body)}`)
 
     if (req.body.method === 'eth_sendBundle') {
-      if (!req.body.params || !req.body.params[0]) {
-        writeError(res, 400, 'missing params')
-        return
-      }
-      bundleCounter.inc()
-      const bundle = req.body.params[0]
-      try {
-        const gasSum = sumBundleGasLimit(bundle)
-        gasHist.observe(gasSum)
-      } catch (error) {
-        console.error(`error decoding bundle: ${error}`)
-        writeError(res, 400, 'unable to decode txs')
-        return
-      }
-      if (!req.body.params[1]) {
-        writeError(res, 400, 'missing block param')
-        return
-      }
-      if (!req.body.params[1].slice(0, 2) !== '0x') {
-        writeError(res, 400, 'block param must be a hex int')
-        return
-      }
-
-      await handler.handleSendBundle(req, res, MINERS)
+      await handler.handleSendBundle(req, res)
     } else if (req.body.method === 'eth_callBundle') {
-      await handler.handleCallBundle(req, res, SIMULATION_RPC)
+      await handler.handleCallBundle(req, res)
     } else {
       const err = `unknown method: ${req.body.method}`
       Sentry.captureException(err)

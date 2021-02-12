@@ -4,7 +4,7 @@ const request = require('request')
 const AWS = require('aws-sdk')
 
 const { writeError } = require('./utils')
-const { sumBundleGasLimit } = require('./bundle')
+const { checkBlacklist } = require('./bundle')
 
 class Handler {
   constructor(MINERS, SIMULATION_RPC, SQS_URL, promClient) {
@@ -34,8 +34,11 @@ class Handler {
     this.bundleCounter.inc()
     const bundle = req.body.params[0]
     try {
-      const gasSum = sumBundleGasLimit(bundle)
-      this.gasHist.observe(gasSum)
+      if (checkBlacklist(bundle)) {
+        console.error(`bundle was interacting with blacklisted address: ${bundle}`)
+        writeError(res, 400, 'unable to decode txs')
+        return
+      }
     } catch (error) {
       console.error(`error decoding bundle: ${error}`)
       writeError(res, 400, 'unable to decode txs')

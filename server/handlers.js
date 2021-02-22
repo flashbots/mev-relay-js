@@ -15,13 +15,6 @@ class Handler {
       name: 'bundles',
       help: '# of bundles received'
     })
-
-    this.gasHist = new promClient.Histogram({
-      name: 'gas_limit',
-      help: 'Histogram of gas limit in bundles',
-      buckets: [22000, 50000, 100000, 150000, 200000, 300000, 400000, 500000, 750000, 1000000, 1250000, 1500000, 2000000, 3000000]
-    })
-
     this.sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
     this.SQS_URL = SQS_URL
   }

@@ -9,7 +9,7 @@ const promBundle = require('express-prom-bundle')
 const { Users } = require('./model')
 const { Handler } = require('./handlers')
 const { writeError } = require('./utils')
-const { keccak256, verifyMessage, entropyToMnemonic } = require('ethers/lib/utils')
+const { verifyMessage, entropyToMnemonic, id } = require('ethers/lib/utils')
 const { constants } = require('ethers')
 
 if (process.env.SENTRY_DSN) {
@@ -103,7 +103,7 @@ app.use(async (req, res, next) => {
     writeError(res, 400, `invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
     return
   }
-  const msg = keccak256(req.body)
+  const msg = id(req.body)
   const address = verifyMessage(msg, auth)
   if (address === constants.AddressZero) {
     writeError(res, 403, `invalid Authorization signature for ${msg}`)

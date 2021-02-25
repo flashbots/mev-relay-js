@@ -6,9 +6,11 @@ const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
 const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
-const { Users, hashPass } = require('./model')
+const { Users } = require('./model')
 const { Handler } = require('./handlers')
 const { writeError } = require('./utils')
+const { keccak256, verifyMessage, entropyToMnemonic } = require('ethers/lib/utils')
+const { constants } = require('ethers')
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -99,6 +101,13 @@ app.use(async (req, res, next) => {
     writeError(res, 400, `invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
     return
   }
+  const msg = keccak256(req.body)
+  const address = verifyMessage(msg, auth)
+  if (address === constants.AddressZero) {
+    writeError(res, 403, `invalid Authorization signature for ${msg}`)
+    return
+  }
+  req.user = { address }
   next()
 })
 app.use(
@@ -106,16 +115,10 @@ app.use(
     windowMs: 60 * 1000, // 1 minute
     max: 15,
     keyGenerator: (req) => {
-      return `${req.body.method}-${req.header('Authorization')}`
+      return `${req.body.method}-${req.user.address}`
     },
     onLimitReached: (req) => {
-      let auth = req.header('Authorization')
-      if (_.startsWith(auth, 'Bearer ')) {
-        auth = auth.slice(7)
-      }
-      auth = auth.slice(0, 8)
-
-      console.log(`rate limit reached for auth: ${auth} ${req.body.method} ${req.ip}`)
+      console.log(`rate limit reached for auth: ${req.user.address} ${req.body.method} ${req.ip}`)
     }
   })
 )
@@ -137,39 +140,23 @@ const uniqueUserGauge = new promClient.Gauge({
 
 app.use(async (req, res, next) => {
   try {
-    let auth = req.header('Authorization')
-    if (_.startsWith(auth, 'Bearer ')) {
-      auth = auth.slice(7)
-    }
-
-    auth = _.split(auth, ':')
-    if (auth.length !== 2) {
-      writeError(res, 403, 'invalid Authorization token')
-      return
-    }
-
-    const keyID = auth[0]
-    const secretKey = auth[1]
-
-    const users = await Users.query('keyID').eq(keyID).exec()
-    const user = users[0]
-
-    if (!user) {
-      writeError(res, 403, 'invalid Authorization token')
-      return
-    }
-    if ((await hashPass(secretKey, user.salt)) !== user.hashedSecretKey) {
-      writeError(res, 403, 'invalid Authorization token')
-      return
-    }
-    let count = UNIQUE_USER_COUNT[keyID]
+    let count = UNIQUE_USER_COUNT[req.user.address]
     if (!count) {
       count = 0
     }
-    UNIQUE_USER_COUNT[keyID] = count + 1
-    bundleCounterPerUser.inc({ username: keyID.slice(0, 8) })
+    UNIQUE_USER_COUNT[req.user.address] = count + 1
 
-    req.user = { keyID }
+    // todo: is first two words sufficient entropy?
+    const username = entropyToMnemonic(req.user.address).split(' ').slice(0, 2).join('-')
+    bundleCounterPerUser.inc({ username })
+
+    const user = new Users({
+      address: req.user.address,
+      name: username
+    })
+    await user.save()
+
+    req.user.name = username
     next()
   } catch (error) {
     Sentry.captureException(error)

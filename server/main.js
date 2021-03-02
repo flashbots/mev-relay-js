@@ -36,11 +36,9 @@ if (_.includes(process.argv, '-h') || _.includes(process.argv, '--help')) {
   process.exit(0)
 }
 
-const MINERS = _.split(process.argv[2], ',')
-if (MINERS.length === 0) {
-  console.error('no valid miner urls provided')
-  help()
-  process.exit(1)
+let MINERS = []
+if (process.argv[2]) {
+  MINERS = _.split(process.argv[2], ',')
 }
 
 const SIMULATION_RPC = process.argv[3]

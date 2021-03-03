@@ -6,10 +6,10 @@ const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
 const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
-const { Users } = require('./model')
+const { Users, hashPass } = require('./model')
 const { Handler } = require('./handlers')
 const { writeError } = require('./utils')
-const { verifyMessage, entropyToMnemonic, id } = require('ethers/lib/utils')
+const { verifyMessage, id } = require('ethers/lib/utils')
 const { constants } = require('ethers')
 
 if (process.env.SENTRY_DSN) {
@@ -82,13 +82,21 @@ const { promClient, metricsMiddleware } = metricsRequestMiddleware
 const metricsApp = express()
 metricsApp.use(metricsMiddleware)
 
+const UNIQUE_USER_COUNT = {}
+const bundleCounterPerUser = new promClient.Counter({
+  name: 'relay_bundles_per_user',
+  help: '# of bundles received per user',
+  labelNames: ['username']
+})
+
 app.use(metricsRequestMiddleware)
 app.use(morgan('combined'))
 app.use(bodyParser.json())
 app.use(async (req, res, next) => {
-  const auth = req.header('Authorization')
-  if (!auth) {
-    writeError(res, 403, 'missing Authorization header')
+  let auth = req.header('Authorization')
+  const signature = req.header('X-Flashbots-Signature')
+  if (!auth && !signature) {
+    writeError(res, 403, 'missing Authorization or X-Flashbots-Signature header')
     return
   }
   if (!req.body) {
@@ -103,86 +111,72 @@ app.use(async (req, res, next) => {
     writeError(res, 400, `invalid method, only ${ALLOWED_METHODS} supported, you provided: ${req.body.method}`)
     return
   }
-  const msg = id(req.body)
-  const address = verifyMessage(msg, auth)
-  if (address === constants.AddressZero) {
-    writeError(res, 403, `invalid Authorization signature for ${msg}`)
-    return
+
+  req.user = {}
+  if (signature) {
+    const msg = id(req.body)
+    try {
+      const address = verifyMessage(msg, signature)
+      if (address === constants.AddressZero) {
+        writeError(res, 403, `invalid signature for ${msg}`)
+        return
+      }
+      req.user.address = address
+    } catch (err) {
+      console.error(`error verifyMessage: ${err}`)
+      writeError(res, 403, `invalid signature for ${msg}`)
+      return
+    }
   }
-  req.user = { address }
+
+  if (auth) {
+    if (_.startsWith(auth, 'Bearer ')) {
+      auth = auth.slice(7)
+    }
+
+    auth = _.split(auth, ':')
+    if (auth.length !== 2) {
+      writeError(res, 403, 'invalid Authorization token')
+      return
+    }
+
+    const keyID = auth[0]
+    const secretKey = auth[1]
+
+    const users = await Users.query('keyID').eq(keyID).exec()
+    const user = users[0]
+
+    if (!user) {
+      writeError(res, 403, 'invalid Authorization token')
+      return
+    }
+    if ((await hashPass(secretKey, user.salt)) !== user.hashedSecretKey) {
+      writeError(res, 403, 'invalid Authorization token')
+      return
+    }
+
+    req.user.keyID = keyID
+  }
+
+  const username = req.user.address || req.user.keyID.slice(0, 8)
+  let count = UNIQUE_USER_COUNT[username]
+  if (!count) {
+    count = 0
+  }
+  UNIQUE_USER_COUNT[username] = count + 1
+
+  bundleCounterPerUser.inc({ username })
   next()
 })
 app.use(
   rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 15,
-    keyGenerator: (req) => {
-      return `${req.body.method}-${req.user.address}`
-    },
-    onLimitReached: (req) => {
-      console.log(`rate limit reached for auth: ${req.user.address} ${req.body.method} ${req.ip}`)
-    }
-  })
-)
-const UNIQUE_USER_COUNT = {}
-
-const bundleCounterPerUser = new promClient.Counter({
-  name: 'relay_bundles_per_user',
-  help: '# of bundles received per user',
-  labelNames: ['username']
-})
-// eslint-disable-next-line no-unused-vars
-const uniqueUserGauge = new promClient.Gauge({
-  name: 'relay_unique_user',
-  help: 'unique user keys in relay',
-  collect() {
-    this.set(Object.keys(UNIQUE_USER_COUNT).length)
-  }
-})
-
-app.use(async (req, res, next) => {
-  try {
-    let count = UNIQUE_USER_COUNT[req.user.address]
-    if (!count) {
-      count = 0
-    }
-    UNIQUE_USER_COUNT[req.user.address] = count + 1
-
-    // todo: is first two words sufficient entropy?
-    const username = entropyToMnemonic(req.user.address).split(' ').slice(0, 2).join('-')
-    bundleCounterPerUser.inc({ username })
-
-    const user = new Users({
-      address: req.user.address,
-      name: username
-    })
-    await user.save()
-
-    req.user.name = username
-    next()
-  } catch (error) {
-    Sentry.captureException(error)
-    console.error('error in auth middleware', error)
-    try {
-      writeError(res, 403, 'internal server error')
-    } catch (error2) {
-      Sentry.captureException(error2)
-      console.error(`error in error response: ${error2}`)
-    }
-  }
-})
-// the 2nd rate limit will match all requests that get through the above
-// middleware, so this becomes a global rate limit that only applies to valid
-// requests
-app.use(
-  rateLimit({
-    windowMs: 15 * 1000,
     max: 60,
-    keyGenerator: () => {
-      return ''
+    keyGenerator: (req) => {
+      return `${req.body.method}-${req.user.address}-${req.user.keyID}`
     },
     onLimitReached: (req) => {
-      console.log('rate limit reached for global')
+      console.log(`rate limit reached for auth: ${req.user.address}-${req.user.keyID} ${req.body.method} ${req.ip}`)
     }
   })
 )
@@ -216,7 +210,7 @@ app.use(async (req, res) => {
 })
 process.on('unhandledRejection', (err) => {
   Sentry.captureException(err)
-  console.error(`unhandled rejection: ${err}`)
+  console.error(`unhandled rejection: ${err} ${err.stack}`)
 })
 
 app.listen(PORT, () => {

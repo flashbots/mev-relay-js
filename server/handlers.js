@@ -68,14 +68,21 @@ class Handler {
 
     const params = {
       DelaySeconds: 0,
-      MessageAttributes: {
-        KeyID: {
-          DataType: 'String',
-          StringValue: req.user.keyID
-        }
-      },
+      MessageAttributes: {},
       MessageBody: JSON.stringify(req.body),
       QueueUrl: this.SQS_URL
+    }
+    if (req.user.keyID) {
+      params.MessageAttributes.KeyID = {
+        DataType: 'String',
+        StringValue: req.user.keyID
+      }
+    }
+    if (req.user.address) {
+      params.MessageAttributes.SignerAddress = {
+        DataType: 'String',
+        StringValue: req.user.address
+      }
     }
 
     await this.sqs.sendMessage(params).promise()

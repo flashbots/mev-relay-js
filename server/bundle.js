@@ -13,7 +13,7 @@ const BLACKLIST = [
 function checkBlacklistTx(rawTx) {
   const tx = Transaction.fromRlpSerializedTx(rawTx)
 
-  return _.includes(BLACKLIST, tx.to.toString()) || _.includes(BLACKLIST, tx.getSenderAddress().toString())
+  return (tx.to && _.includes(BLACKLIST, tx.to.toString())) || _.includes(BLACKLIST, tx.getSenderAddress().toString())
 }
 function checkBlacklist(bundle) {
   bundle.forEach((tx) => {

@@ -89,10 +89,15 @@ const bundleCounterPerUser = new promClient.Counter({
 
 app.use(metricsRequestMiddleware)
 app.use(morgan('combined'))
-app.use(bodyParser.json())
+function rawBodySaver(req, _, buf, encoding) {
+  if (buf && buf.length) {
+    req.rawBody = buf.toString(encoding || 'utf8')
+  }
+}
+app.use(bodyParser.json({ verify: rawBodySaver }))
 app.use(async (req, res, next) => {
   let auth = req.header('Authorization')
-  const signature = req.header('X-Flashbots-Signature')
+  let signature = req.header('X-Flashbots-Signature')
   if (!auth && !signature) {
     writeError(res, 403, 'missing Authorization or X-Flashbots-Signature header')
     return
@@ -112,17 +117,27 @@ app.use(async (req, res, next) => {
 
   req.user = {}
   if (signature) {
-    const msg = id(req.body)
+    signature = _.split(signature, ':')
+    if (signature.length !== 2) {
+      writeError(res, 403, 'invalid X-Flashbots-Signature header')
+      return
+    }
+
+    const msg = id(req.rawBody)
     try {
-      const address = verifyMessage(msg, signature)
+      const address = verifyMessage(msg, signature[1])
       if (address === constants.AddressZero) {
-        writeError(res, 403, `invalid signature for ${msg}`)
+        writeError(res, 403, `invalid signature for ${signature[0]}`)
+        return
+      }
+      if (address.toLowerCase() !== signature[0].toLowerCase()) {
+        writeError(res, 403, `signer address does not equal expected, got ${address}, expected ${signature[0]}`)
         return
       }
       req.user.address = address
     } catch (err) {
       console.error(`error verifyMessage: ${err}`)
-      writeError(res, 403, `invalid signature for ${msg}`)
+      writeError(res, 403, `error in signature check ${signature[0]}`)
       return
     }
   }

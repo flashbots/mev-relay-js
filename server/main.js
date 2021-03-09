@@ -66,6 +66,16 @@ if (!validPort(PORT)) {
 
 const app = express()
 app.set('trust proxy', true)
+
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 60, // limit each IP to this many requests
+    onLimitReached: (req) => {
+      console.log(`rate limit reached for IP: ${req.ip}`)
+    }
+  })
+)
 const metricsRequestMiddleware = promBundle({
   includePath: true,
   includeMethod: true,
@@ -181,18 +191,6 @@ app.use(async (req, res, next) => {
   bundleCounterPerUser.inc({ username })
   next()
 })
-app.use(
-  rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 60,
-    keyGenerator: (req) => {
-      return `${req.body.method}-${req.user.address}-${req.user.keyID}`
-    },
-    onLimitReached: (req) => {
-      console.log(`rate limit reached for auth: ${req.user.address}-${req.user.keyID} ${req.body.method} ${req.ip}`)
-    }
-  })
-)
 
 const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, promClient)
 

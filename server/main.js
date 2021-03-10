@@ -58,6 +58,8 @@ if (!SIMULATION_RPC) {
 }
 
 const PORT = parseInt(_.get(process.argv, '[5]', '18545'))
+const seen = new Set()
+const MAX_BUNDLE_MEMORY = 100000
 
 if (!validPort(PORT)) {
   console.error(`invalid port specified for PORT: ${PORT}`)
@@ -134,6 +136,15 @@ app.use(async (req, res, next) => {
     }
 
     const msg = id(req.rawBody)
+    if (seen.has(msg)) {
+      writeError(res, 226, 'seen recently')
+      return
+    }
+    if (seen.size > MAX_BUNDLE_MEMORY) {
+      seen.clear()
+    }
+    seen.add(msg)
+      
     try {
       const address = verifyMessage(msg, signature[1])
       if (address === constants.AddressZero) {

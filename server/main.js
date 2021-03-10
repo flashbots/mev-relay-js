@@ -58,13 +58,14 @@ if (!SIMULATION_RPC) {
 }
 
 const PORT = parseInt(_.get(process.argv, '[5]', '18545'))
-const bundlesSeen = new Set()
-const MAX_BUNDLE_MEMORY = 100000
 
 if (!validPort(PORT)) {
   console.error(`invalid port specified for PORT: ${PORT}`)
   process.exit(1)
 }
+
+const bundlesSeen = new Set()
+const MAX_BUNDLE_MEMORY = 100000
 
 const app = express()
 app.set('trust proxy', true)

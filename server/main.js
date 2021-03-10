@@ -58,7 +58,7 @@ if (!SIMULATION_RPC) {
 }
 
 const PORT = parseInt(_.get(process.argv, '[5]', '18545'))
-const seen = new Set()
+const bundlesSeen = new Set()
 const MAX_BUNDLE_MEMORY = 100000
 
 if (!validPort(PORT)) {
@@ -136,15 +136,15 @@ app.use(async (req, res, next) => {
     }
 
     const msg = id(req.rawBody)
-    if (seen.has(msg)) {
-      writeError(res, 226, 'seen recently')
+    if (bundlesSeen.has(msg)) {
+      writeError(res, 226, 'bundle seen recently')
       return
     }
-    if (seen.size > MAX_BUNDLE_MEMORY) {
-      seen.clear()
+    if (bundlesSeen.size > MAX_BUNDLE_MEMORY) {
+      bundlesSeen.clear()
     }
-    seen.add(msg)
-      
+    bundlesSeen.add(msg)
+
     try {
       const address = verifyMessage(msg, signature[1])
       if (address === constants.AddressZero) {

@@ -119,7 +119,10 @@ class Handler {
       where
           ${req.user.keyID} = user_key_id`
 
-      res.json({ result: stats })
+      if (stats.length === 0) {
+        return res.json({ error: { message: "stats don't exist for this user", code: -32602 } })
+      }
+      res.json({ result: stats[0] })
     } else {
       const stats = await this.sql`
       select
@@ -129,7 +132,10 @@ class Handler {
       where
           ${req.user.address} = signing_address`
 
-      res.json({ result: stats })
+      if (stats.length === 0) {
+        return res.json({ error: { message: "stats don't exist for this user", code: -32602 } })
+      }
+      res.json({ result: stats[0] })
     }
   }
 }

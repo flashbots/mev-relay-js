@@ -19,7 +19,7 @@ if (process.env.SENTRY_DSN) {
   })
 }
 
-const ALLOWED_METHODS = ['eth_sendBundle', 'eth_callBundle']
+const ALLOWED_METHODS = ['eth_sendBundle', 'eth_callBundle', 'flashbots_getUserStats']
 
 function help() {
   console.log('node ./server/main.js minerUrls simulationRpc sqsUrl [PORT]')
@@ -192,7 +192,7 @@ app.use(async (req, res, next) => {
   next()
 })
 
-const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, promClient)
+const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, process.env.POSTGRES_DSN, promClient)
 
 app.use(async (req, res) => {
   try {
@@ -202,6 +202,8 @@ app.use(async (req, res) => {
       await handler.handleSendBundle(req, res)
     } else if (req.body.method === 'eth_callBundle') {
       await handler.handleCallBundle(req, res)
+    } else if (req.body.method === 'flashbots_getUserStats') {
+      await handler.handleUserStats(req, res)
     } else {
       const err = `unknown method: ${req.body.method}`
       Sentry.captureException(err)

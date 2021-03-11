@@ -2,14 +2,16 @@ const fetch = require('node-fetch')
 const Sentry = require('@sentry/node')
 const request = require('request')
 const AWS = require('aws-sdk')
+const postgres = require('postgres')
 
 const { writeError } = require('./utils')
 const { checkBlacklist } = require('./bundle')
 
 class Handler {
-  constructor(MINERS, SIMULATION_RPC, SQS_URL, promClient) {
+  constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient) {
     this.MINERS = MINERS
     this.SIMULATION_RPC = SIMULATION_RPC
+    this.sql = postgres(PSQL_DSN)
 
     this.bundleCounter = new promClient.Counter({
       name: 'bundles',
@@ -105,6 +107,30 @@ class Handler {
         res.end('internal server error')
       })
       .pipe(res)
+  }
+
+  async handleUserStats(req, res) {
+    if (req.user.keyID) {
+      const stats = await this.sql`
+      select
+          *
+      from
+        stats_by_user_key_id
+      where
+          ${req.user.keyID} = user_key_id`
+
+      res.json({ result: stats })
+    } else {
+      const stats = await this.sql`
+      select
+          *
+      from
+        stats_by_signing_address
+      where
+          ${req.user.address} = signing_address`
+
+      res.json({ result: stats })
+    }
   }
 }
 

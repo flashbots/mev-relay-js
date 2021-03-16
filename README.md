@@ -164,7 +164,7 @@ wallet = ethers.Wallet.createRandom()
 wallet.signMessage(ethers.utils.id(body))
 ```
 
-Take this signature and append it to the ethereum address of the signer, separated by a colon, `:`. Then send it in the `X-Flashbots-Signature` like so:
+Take this signature and append it to the ethereum address of the signer, separated by a colon, `:`. Then send it in the `X-Flashbots-Signature` HTTP header like so:
 ```
 X-Flashbots-Signature: 0x95c622A2c597a8bdC26D371Dd3D57dA9D26052DF:0xc73d4790fed41954869625c159a4617e3374019839a8ad72de15e41371719d6873c780e00293fcdc100aa505f33dd8480e7b07551483c8c438fe8236972d26ca1c
 ```

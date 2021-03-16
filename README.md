@@ -42,40 +42,7 @@ Example:
   ]
 }
 ```
-### eth_sendBundle
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "eth_sendBundle",
-  "params": [
-    signedTxs,
-    blockNumber,
-    minTimestamp,
-    maxTimestamp
-  ]
-}
-```
 
-* **signedTxs**: Array[String], A list of signed transactions to execute in an atomic bundle
-* **blockNumber**: String, a hex encoded block number for which this bundle is valid on
-* **minTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
-* **maxTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
-
-Example:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "eth_sendBundle",
-  "params": [
-    ["0x123abc...", "0x456def..."],
-    "0xb63dcd",
-    0,
-    1615920932
-  ]
-}
-```
 ### eth_callBundle
 ```json
 {

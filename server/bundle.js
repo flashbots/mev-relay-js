@@ -10,6 +10,8 @@ const BLACKLIST = [
   '0x7f367cc41522ce07553e823bf3be79a889debe1b'
 ]
 
+const MAX_DISTINCT_TO = 2
+
 function checkBlacklistTx(rawTx) {
   const tx = Transaction.fromRlpSerializedTx(rawTx)
 
@@ -25,4 +27,14 @@ function checkBlacklist(bundle) {
   return false
 }
 
-module.exports = { checkBlacklist }
+function checkDistinctToAddress(bundle) {
+  const toAddresses = {}
+  bundle.forEach((rawTx) => {
+    const tx = Transaction.fromRlpSerializedTx(rawTx)
+    toAddresses[tx.to.toString()] = true
+  })
+
+  return Object.keys(toAddresses).length > MAX_DISTINCT_TO
+}
+
+module.exports = { checkBlacklist, checkDistinctToAddress, MAX_DISTINCT_TO }

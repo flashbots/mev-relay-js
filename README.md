@@ -123,9 +123,9 @@ Returns a quick summary of how this searcher is performing in the relay:
 
 ## Authentication
 
-This relay requires all payloads are signed with an ethereum wallet.
+This relay requires that all payloads are signed with an ethereum wallet.
 
-The signature is calculated by taking the EIP-191 hash of the json body encoded as UTF-8 bytes. Example code in ethers.js:
+The signature is calculated by taking the EIP-191 hash of the json body encoded as UTF-8 bytes. Here's an example using ethers.js:
 ```js
 wallet = ethers.Wallet.createRandom()
 wallet.signMessage(ethers.utils.id(body))

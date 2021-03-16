@@ -5,7 +5,7 @@ const AWS = require('aws-sdk')
 const postgres = require('postgres')
 
 const { writeError } = require('./utils')
-const { checkBlacklist } = require('./bundle')
+const { checkBlacklist, checkDistinctToAddress, MAX_DISTINCT_TO } = require('./bundle')
 
 class Handler {
   constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient) {
@@ -31,7 +31,11 @@ class Handler {
     try {
       if (checkBlacklist(bundle)) {
         console.error(`bundle was interacting with blacklisted address: ${bundle}`)
-        writeError(res, 400, 'unable to decode txs')
+        writeError(res, 400, 'blacklisted tx')
+        return
+      } else if (checkDistinctToAddress(bundle)) {
+        console.error(`bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
+        writeError(res, 400, `bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         return
       }
     } catch (error) {
@@ -94,6 +98,22 @@ class Handler {
   }
 
   async handleCallBundle(req, res) {
+    const bundle = req.body.params[0]
+    try {
+      if (checkBlacklist(bundle)) {
+        console.error(`bundle was interacting with blacklisted address: ${bundle}`)
+        writeError(res, 400, 'blacklisted tx')
+        return
+      } else if (checkDistinctToAddress(bundle)) {
+        console.error(`bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
+        writeError(res, 400, `bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
+        return
+      }
+    } catch (error) {
+      console.error(`error decoding bundle: ${error}`)
+      writeError(res, 400, 'unable to decode txs')
+      return
+    }
     request
       .post({
         url: this.SIMULATION_RPC,

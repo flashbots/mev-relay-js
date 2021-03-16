@@ -23,10 +23,10 @@ The relay provides new JSON-RPC methods for interfacing with Flashbots. They are
 }
 ```
 
-signedTxs: Array[String], A list of signed transactions to execute in an atomic bundle
-blockNumber: String, a hex encoded block number for which this bundle is valid on
-minTimestamp: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
-maxTimestamp: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
+* **signedTxs**: Array[String], A list of signed transactions to execute in an atomic bundle
+* **blockNumber**: String, a hex encoded block number for which this bundle is valid on
+* **minTimestamp**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
+* **maxTimestamp**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
 
 Example:
 ```json
@@ -57,10 +57,10 @@ Example:
 }
 ```
 
-signedTxs: Array[String], A list of signed transactions to execute in an atomic bundle
-blockNumber: String, a hex encoded block number for which this bundle is valid on
-minTimestamp(Optional): Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
-maxTimestamp(Optional): Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
+* **signedTxs**: Array[String], A list of signed transactions to execute in an atomic bundle
+* **blockNumber**: String, a hex encoded block number for which this bundle is valid on
+* **minTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
+* **maxTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
 
 Example:
 ```json
@@ -91,10 +91,10 @@ Example:
 }
 ```
 
-signedTxs: Array[String], A list of signed transactions to execute in an atomic bundle
-targetBlockNumber: String, a hex encoded block number for which this bundle is valid on
-stateBlockNumber: String, either a hex encoded number or a block tag for which state to base this simulation on. Can use "latest"
-timestamp(Optional): Number, the timestamp to use for this bundle simulation, in seconds since the unix epoch
+* **signedTxs**: Array[String], A list of signed transactions to execute in an atomic bundle
+* **targetBlockNumber**: String, a hex encoded block number for which this bundle is valid on
+* **stateBlockNumber**: String, either a hex encoded number or a block tag for which state to base this simulation on. Can use "latest"
+* **timestamp(Optional)**: Number, the timestamp to use for this bundle simulation, in seconds since the unix epoch
 
 Example:
 ```json
@@ -122,7 +122,7 @@ Example:
 }
 ```
 
-blockNumber: String, a hex encoded recent block number, in order to prevent replay attacks. Must be within 20 blocks of the current chain tip.
+* **blockNumber**: String, a hex encoded recent block number, in order to prevent replay attacks. Must be within 20 blocks of the current chain tip.
 
 Returns a quick summary of how this searcher is performing in the relay:
 ```json
@@ -151,8 +151,8 @@ Returns a quick summary of how this searcher is performing in the relay:
 }
 ```
 
-blocks_won: This number represents how many blocks were won by this user, according to the relay. This is **not** how many ended up on chain, this is just what our relay thinks would've won.
-avg_gas_price_gwei: The adjusted gas price, averaged over all submissions by this user.
+* **blocks_won**: This number represents how many blocks were won by this user, according to the relay. This is **not** how many ended up on chain, this is just what our relay thinks would've won.
+* **avg_gas_price_gwei**: The adjusted gas price, averaged over all submissions by this user.
 
 ## Authentication
 

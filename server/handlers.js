@@ -5,7 +5,7 @@ const AWS = require('aws-sdk')
 const postgres = require('postgres')
 
 const { writeError } = require('./utils')
-const { checkBlacklist, checkDistinctToAddress, MAX_DISTINCT_TO } = require('./bundle')
+const { checkBlacklist, checkDistinctAddresses, MAX_DISTINCT_TO } = require('./bundle')
 
 class Handler {
   constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient) {
@@ -33,7 +33,7 @@ class Handler {
         console.error(`bundle was interacting with blacklisted address: ${bundle}`)
         writeError(res, 400, 'blacklisted tx')
         return
-      } else if (checkDistinctToAddress(bundle)) {
+      } else if (checkDistinctAddresses(bundle)) {
         console.error(`bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         writeError(res, 400, `bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         return
@@ -104,7 +104,7 @@ class Handler {
         console.error(`bundle was interacting with blacklisted address: ${bundle}`)
         writeError(res, 400, 'blacklisted tx')
         return
-      } else if (checkDistinctToAddress(bundle)) {
+      } else if (checkDistinctAddresses(bundle)) {
         console.error(`bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         writeError(res, 400, `bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         return

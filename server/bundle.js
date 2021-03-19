@@ -27,14 +27,16 @@ function checkBlacklist(bundle) {
   return false
 }
 
-function checkDistinctToAddress(bundle) {
+function checkDistinctAddresses(bundle) {
+  const fromAddresses = {}
   const toAddresses = {}
   bundle.forEach((rawTx) => {
     const tx = Transaction.fromRlpSerializedTx(rawTx)
     toAddresses[tx.to && tx.to.toString()] = true
+    fromAddresses[tx.from && tx.from.toString()] = true
   })
 
-  return Object.keys(toAddresses).length > MAX_DISTINCT_TO
+  return Object.keys(toAddresses).length > MAX_DISTINCT_TO && Object.keys(fromAddresses).length > MAX_DISTINCT_TO
 }
 
-module.exports = { checkBlacklist, checkDistinctToAddress, MAX_DISTINCT_TO }
+module.exports = { checkBlacklist, checkDistinctAddresses, MAX_DISTINCT_TO }

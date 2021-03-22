@@ -113,7 +113,7 @@ This relay requires that all payloads are signed with an ethereum wallet.
 The signature is calculated by taking the EIP-191 hash of the json body encoded as UTF-8 bytes. Here's an example using ethers.js:
 
 ```js
-body = '{"id": 1234, "params": [["0x123..."], "0xB84969"]}'
+body = '{"id": 1234, "method", "eth_sendBundle", "params": [["0x123..."], "0xB84969"]}'
 wallet = ethers.Wallet.createRandom()
 wallet.signMessage(ethers.utils.id(body))
 ```
@@ -124,7 +124,7 @@ or in web3py:
 from web3 import Web3
 from eth_account import Account, messages
 
-body = '{"id": 1234, "params": [["0x123..."], "0xB84969"]}'
+body = '{"id": 1234, "method", "eth_sendBundle", "params": [["0x123..."], "0xB84969"]}'
 message = messages.encode_defunct(text=Web3.keccak(text=body).hex())
 signed_message = Account.sign_message(message, private_key=private_key_hex)
 ```

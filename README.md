@@ -21,8 +21,8 @@ The relay provides new JSON-RPC methods for interfacing with Flashbots. They are
 
 - **signedTxs**: Array[String], A list of signed transactions to execute in an atomic bundle
 - **blockNumber**: String, a hex encoded block number for which this bundle is valid on
-- **minTimestamp**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
-- **maxTimestamp**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
+- **minTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
+- **maxTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
 
 Example:
 

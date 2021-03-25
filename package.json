@@ -1,6 +1,6 @@
 {
   "name": "mev-relay",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "A relay for sending flashbots bundle to multiple miners",
   "scripts": {
     "start": "node server/main.js",

@@ -13,7 +13,7 @@ const BLACKLIST = [
 const MAX_DISTINCT_TO = 2
 
 function checkBlacklistTx(rawTx) {
-  const tx = Transaction.fromRlpSerializedTx(rawTx)
+  const tx = Transaction.fromSerializedTx(rawTx)
 
   return (tx.to && _.includes(BLACKLIST, tx.to.toString())) || _.includes(BLACKLIST, tx.getSenderAddress().toString())
 }

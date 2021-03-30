@@ -17,7 +17,9 @@ class Handler {
       name: 'bundles',
       help: '# of bundles received'
     })
-    this.sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
+    if (SQS_URL) {
+      this.sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
+    }
     this.SQS_URL = SQS_URL
   }
 
@@ -72,27 +74,28 @@ class Handler {
       }
     })
 
-    const params = {
-      DelaySeconds: 0,
-      MessageAttributes: {},
-      MessageBody: JSON.stringify(req.body),
-      QueueUrl: this.SQS_URL
-    }
-    if (req.user.keyID) {
-      params.MessageAttributes.KeyID = {
-        DataType: 'String',
-        StringValue: req.user.keyID
+    if (this.SQS_URL) {
+      const params = {
+        DelaySeconds: 0,
+        MessageAttributes: {},
+        MessageBody: JSON.stringify(req.body),
+        QueueUrl: this.SQS_URL
       }
-    }
-    if (req.user.address) {
-      params.MessageAttributes.SignerAddress = {
-        DataType: 'String',
-        StringValue: req.user.address
+      if (req.user.keyID) {
+        params.MessageAttributes.KeyID = {
+          DataType: 'String',
+          StringValue: req.user.keyID
+        }
       }
+      if (req.user.address) {
+        params.MessageAttributes.SignerAddress = {
+          DataType: 'String',
+          StringValue: req.user.address
+        }
+      }
+
+      await this.sqs.sendMessage(params).promise()
     }
-
-    await this.sqs.sendMessage(params).promise()
-
     res.setHeader('Content-Type', 'application/json')
     res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)
   }

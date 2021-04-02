@@ -129,6 +129,14 @@ message = messages.encode_defunct(text=Web3.keccak(text=body).hex())
 signed_message = Account.sign_message(message, private_key=private_key_hex)
 ```
 
+or in go:
+
+```go
+hashedBody := crypto.Keccak256Hash([]byte(body)).Hex()
+sig, err := crypto.Sign(crypto.Keccak256([]byte("\x19Ethereum Signed Message:\n"+strconv.Itoa(len(hashedBody))+hashedBody)), pk)
+signature := addr.Hex() + ":" + hexutil.Encode(sig)
+```
+
 Take this signature and append it to the ethereum address of the signer, separated by a colon, `:`. Then send it in the `X-Flashbots-Signature` HTTP header like so:
 
 ```

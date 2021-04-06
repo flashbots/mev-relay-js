@@ -1,4 +1,5 @@
 const { Transaction } = require('@ethereumjs/tx')
+const Common = require('@ethereumjs/common').default
 const _ = require('lodash')
 
 const BLACKLIST = [
@@ -12,8 +13,10 @@ const BLACKLIST = [
 
 const MAX_DISTINCT_TO = 2
 
+const commonOpts = new Common({ chain: process.env.CHAIN_NAME || 'mainnet' })
+
 function checkBlacklistTx(rawTx) {
-  const tx = Transaction.fromRlpSerializedTx(rawTx)
+  const tx = Transaction.fromRlpSerializedTx(rawTx, { common: commonOpts })
 
   return (tx.to && _.includes(BLACKLIST, tx.to.toString())) || _.includes(BLACKLIST, tx.getSenderAddress().toString())
 }
@@ -32,7 +35,7 @@ function checkDistinctAddresses(bundle) {
   const fromAddresses = {}
   const toAddresses = {}
   bundle.forEach((rawTx) => {
-    const tx = Transaction.fromRlpSerializedTx(rawTx)
+    const tx = Transaction.fromRlpSerializedTx(rawTx, { common: commonOpts })
     toAddresses[tx.to && tx.to.toString()] = true
     fromAddresses[tx.from && tx.from.toString()] = true
   })

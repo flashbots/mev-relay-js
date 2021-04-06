@@ -147,15 +147,4 @@ This signer does not have to be related to the signer of your actual transaction
 
 ## Miners
 
-[A simple example](miner/proxy.js) of a reverse proxy that a miner can run to expose just the eth_sendBundle JSON-RPC method. You can install/run it like so:
-
-```bash
-# install nodejs on your system, e.g. `sudo apt install nodejs npm` on debian/ubuntu
-sudo npm install -g yarn
-
-git clone https://github.com/flashbots/mev-relay-js.git
-cd mev-relay-js
-
-yarn install
-yarn run miner
-```
+See [https://github.com/flashbots/mev-proxy](https://github.com/flashbots/mev-proxy) for an example reverse proxy that this relay can connect to. Also, take a look at [https://github.com/flashbots/mev-geth](https://github.com/flashbots/mev-geth)

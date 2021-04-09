@@ -37,7 +37,7 @@ function checkDistinctAddresses(bundle) {
   bundle.forEach((rawTx) => {
     const tx = Transaction.fromRlpSerializedTx(rawTx, { common: commonOpts })
     toAddresses[tx.to && tx.to.toString()] = true
-    fromAddresses[tx.from && tx.from.toString()] = true
+    fromAddresses[tx.getSenderAddress() && tx.getSenderAddress().toString()] = true
   })
 
   return Object.keys(toAddresses).length > MAX_DISTINCT_TO && Object.keys(fromAddresses).length > MAX_DISTINCT_TO

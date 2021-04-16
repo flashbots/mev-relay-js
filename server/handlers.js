@@ -117,6 +117,9 @@ class Handler {
       writeError(res, 400, 'unable to decode txs')
       return
     }
+
+    req.body.params = [...req.body.params.slice(0, 3), process.env.COINBASE_ADDRESS, ...req.body.params.slice(3)]
+
     request
       .post({
         url: this.SIMULATION_RPC,

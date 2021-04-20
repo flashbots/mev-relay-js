@@ -105,7 +105,7 @@ function rawBodySaver(req, _, buf, encoding) {
 }
 app.use(bodyParser.json({ verify: rawBodySaver }))
 app.use(async (req, res, next) => {
-  let auth = req.header('Authorization')
+  const auth = req.header('Authorization')
   let signature = req.header('X-Flashbots-Signature')
   if (!signature) {
     writeError(res, 403, 'missing X-Flashbots-Signature header')
@@ -152,7 +152,7 @@ app.use(async (req, res, next) => {
   }
 
   if (auth) {
-    writeError(res, 403, `invalid authorization method, API keys have been deprecated, use X-Flashbots-Signature`)
+    writeError(res, 403, 'invalid authorization method, API keys have been deprecated, use X-Flashbots-Signature')
     return
   }
 

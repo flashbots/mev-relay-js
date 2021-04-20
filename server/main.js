@@ -6,7 +6,6 @@ const rateLimit = require('express-rate-limit')
 const _ = require('lodash')
 const Sentry = require('@sentry/node')
 const promBundle = require('express-prom-bundle')
-const { Users, hashPass } = require('./model')
 const { Handler } = require('./handlers')
 const { writeError } = require('./utils')
 const { verifyMessage, id } = require('ethers/lib/utils')
@@ -108,8 +107,8 @@ app.use(bodyParser.json({ verify: rawBodySaver }))
 app.use(async (req, res, next) => {
   let auth = req.header('Authorization')
   let signature = req.header('X-Flashbots-Signature')
-  if (!auth && !signature) {
-    writeError(res, 403, 'missing Authorization or X-Flashbots-Signature header')
+  if (!signature) {
+    writeError(res, 403, 'missing X-Flashbots-Signature header')
     return
   }
   if (!req.body) {
@@ -153,32 +152,8 @@ app.use(async (req, res, next) => {
   }
 
   if (auth) {
-    if (_.startsWith(auth, 'Bearer ')) {
-      auth = auth.slice(7)
-    }
-
-    auth = _.split(auth, ':')
-    if (auth.length !== 2) {
-      writeError(res, 403, 'invalid Authorization token')
-      return
-    }
-
-    const keyID = auth[0]
-    const secretKey = auth[1]
-
-    const users = await Users.query('keyID').eq(keyID).exec()
-    const user = users[0]
-
-    if (!user) {
-      writeError(res, 403, 'invalid Authorization token')
-      return
-    }
-    if ((await hashPass(secretKey, user.salt)) !== user.hashedSecretKey) {
-      writeError(res, 403, 'invalid Authorization token')
-      return
-    }
-
-    req.user.keyID = keyID
+    writeError(res, 403, `invalid authorization method, API keys have been deprecated, use X-Flashbots-Signature`)
+    return
   }
 
   const username = req.user.address || req.user.keyID.slice(0, 8)

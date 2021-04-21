@@ -97,7 +97,7 @@ class Handler {
       await this.sqs.sendMessage(params).promise()
     }
     res.setHeader('Content-Type', 'application/json')
-    res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)
+    res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":true}`)
   }
 
   async handleCallBundle(req, res) {

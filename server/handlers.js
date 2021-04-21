@@ -30,12 +30,17 @@ class Handler {
     }
     this.bundleCounter.inc()
     const bundle = req.body.params[0]
+    let txs = bundle
+    if (!Array.isArray(txs)) {
+      txs = bundle.txs
+    }
+
     try {
-      if (checkBlacklist(bundle)) {
-        console.error(`bundle was interacting with blacklisted address: ${bundle}`)
+      if (checkBlacklist(txs)) {
+        console.error(`txs was interacting with blacklisted address: ${txs}`)
         writeError(res, 400, 'blacklisted tx')
         return
-      } else if (checkDistinctAddresses(bundle)) {
+      } else if (checkDistinctAddresses(txs)) {
         console.error(`bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         writeError(res, 400, `bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         return
@@ -45,16 +50,23 @@ class Handler {
       writeError(res, 400, 'unable to decode txs')
       return
     }
-    if (!req.body.params[1]) {
+    const blockParam = req.body.params[1] || bundle.blockNumber
+    if (!blockParam) {
       writeError(res, 400, 'missing block param')
       return
     }
-    if (req.body.params[1].slice(0, 2) !== '0x' || !(parseInt(req.body.params[1], 16) > 0)) {
+    if (blockParam.slice(0, 2) !== '0x' || !(parseInt(blockParam, 16) > 0)) {
       writeError(res, 400, 'block param must be a hex int')
       return
     }
-    if (req.body.params[2] && !(req.body.params[2] > 0)) {
-      writeError(res, 400, 'timestamp must be an int')
+    const minTimestamp = req.body.params[2] || bundle.minTimestamp
+    if (minTimestamp && !(minTimestamp > 0)) {
+      writeError(res, 400, 'minTimestamp must be an int')
+      return
+    }
+    const maxTimestamp = req.body.params[3] || bundle.maxTimestamp
+    if (maxTimestamp && !(maxTimestamp > 0)) {
+      writeError(res, 400, 'maxTimestamp must be an int')
       return
     }
 
@@ -101,7 +113,10 @@ class Handler {
   }
 
   async handleCallBundle(req, res) {
-    const bundle = req.body.params[0]
+    let bundle = req.body.params[0]
+    if (!Array.isArray(bundle)) {
+      bundle = bundle.txs
+    }
     try {
       if (checkBlacklist(bundle)) {
         console.error(`bundle was interacting with blacklisted address: ${bundle}`)

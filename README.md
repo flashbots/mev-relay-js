@@ -41,7 +41,7 @@ Example:
 {
   "jsonrpc": "2.0",
   "id": 1,
-  "method": "eth_sendBundle",
+  "method": "eth_callBundle",
   "params": [signedTxs, targetBlockNumber, stateBlockNumber, timestamp]
 }
 ```

@@ -1,4 +1,4 @@
-const { ethers } = require("ethers");
+const { ethers } = require('ethers')
 const _ = require('lodash')
 
 const BLACKLIST = [
@@ -14,7 +14,7 @@ const BLACKLIST = [
 const MAX_DISTINCT_TO = 2
 
 function checkBlacklistTx(rawTx) {
-  const tx = ethers.utils.parseTransaction(rawTx);
+  const tx = ethers.utils.parseTransaction(rawTx)
 
   return (tx.to && _.includes(BLACKLIST, tx.to.toString())) || (tx.from && _.includes(BLACKLIST, tx.from.toString()))
 }
@@ -33,7 +33,7 @@ function checkDistinctAddresses(bundle) {
   const fromAddresses = {}
   const toAddresses = {}
   bundle.forEach((rawTx) => {
-    const tx = ethers.utils.parseTransaction(rawTx);
+    const tx = ethers.utils.parseTransaction(rawTx)
     toAddresses[tx.to && tx.to.toString()] = true
     fromAddresses[tx.from && tx.from.toString()] = true
   })

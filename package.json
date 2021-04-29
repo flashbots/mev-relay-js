@@ -33,7 +33,9 @@
     "node-fetch": "^2.6.1",
     "postgres": "^1.0.2",
     "prom-client": "^13.0.0",
-    "request": "^2.88.2"
+    "request": "^2.88.2",
+    "uuid": "^8.3.2",
+    "ws": "^7.4.5"
   },
   "devDependencies": {
     "eslint": "^7.13.0",

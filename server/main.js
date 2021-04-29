@@ -10,6 +10,28 @@ const { Handler } = require('./handlers')
 const { writeError } = require('./utils')
 const { verifyMessage, id } = require('ethers/lib/utils')
 const { constants } = require('ethers')
+const WebSocket = require('ws')
+
+const wss = new WebSocket.Server({ port: 8080 }) // WS Server to send bundles to miners
+
+function heartbeat() {
+  // Helper used to check client connection health
+  this.isAlive = true
+}
+
+const interval = setInterval(function ping() {
+  wss.clients.forEach(function each(ws) {
+    if (ws.isAlive === false) {
+      return ws.terminate()
+    }
+    ws.isAlive = false
+    ws.ping(()=> ws.send("Hello")) // Ping
+  })
+}, 10000) // Heartbeat polling interval
+
+wss.on('close', function close() {
+  clearInterval(interval)
+})
 
 if (process.env.SENTRY_DSN) {
   console.log('initializing sentry')
@@ -167,7 +189,7 @@ app.use(async (req, res, next) => {
   next()
 })
 
-const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, process.env.POSTGRES_DSN, promClient)
+const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, process.env.POSTGRES_DSN, promClient, wss, heartbeat)
 
 app.use(async (req, res) => {
   try {

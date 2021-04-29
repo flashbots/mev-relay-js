@@ -8,11 +8,16 @@ const { writeError } = require('./utils')
 const { checkBlacklist, checkDistinctAddresses, MAX_DISTINCT_TO } = require('./bundle')
 
 class Handler {
-  constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient) {
+  constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient, wss, heartbeat) {
     this.MINERS = MINERS
     this.SIMULATION_RPC = SIMULATION_RPC
     this.sql = postgres(PSQL_DSN)
-
+    this.wss = wss
+    // Message sent to clients on first connection
+    const initMessage = {
+      data: 'Successfully connected to relay WS',
+      type: 'success'
+    }
     this.bundleCounter = new promClient.Counter({
       name: 'bundles',
       help: '# of bundles received'
@@ -21,6 +26,16 @@ class Handler {
       this.sqs = new AWS.SQS({ apiVersion: '2012-11-05' })
     }
     this.SQS_URL = SQS_URL
+
+    // Setup WS
+    wss.on('connection', async function connection(ws, req) {
+      ws.send(JSON.stringify(initMessage))
+      ws.isAlive = true
+      ws.on('pong', heartbeat)
+      ws.on('close', (m) => {
+        console.log('miner ws closed ' + m)
+      })
+    })
   }
 
   async handleSendBundle(req, res) {
@@ -85,6 +100,21 @@ class Handler {
         console.error('Error calling miner', minerUrl, error)
       }
     })
+    // Sending bundles to all connected clients
+    try {
+      this.wss.clients.forEach(function each(ws) {
+        if (ws.isAlive) {
+          const bundleData = {
+            data: req.body,
+            type: 'bundle'
+          }
+          ws.send(JSON.stringify(bundleData))
+        }
+      })
+    } catch (error) {
+      Sentry.captureException(error)
+      console.error('Error sending bundle to miner via ws', error)
+    }
 
     if (this.SQS_URL) {
       const params = {

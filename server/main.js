@@ -25,7 +25,7 @@ const interval = setInterval(function ping() {
       return ws.terminate()
     }
     ws.isAlive = false
-    ws.ping(()=> ws.send("Hello")) // Ping
+    ws.ping(() => ws.send('Hello')) // Ping
   })
 }, 10000) // Heartbeat polling interval
 

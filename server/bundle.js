@@ -1,5 +1,8 @@
-const { ethers } = require('ethers')
+const { TransactionFactory } = require('@ethereumjs/tx')
 const _ = require('lodash')
+const Common = require('@ethereumjs/common').default
+
+const commonOpts = new Common({ chain: process.env.CHAIN_NAME || 'mainnet' })
 
 const BLACKLIST = [
   // OFAC banned addresses
@@ -13,14 +16,13 @@ const BLACKLIST = [
 
 const MAX_DISTINCT_TO = 2
 
-function checkBlacklistTx(rawTx) {
-  const tx = ethers.utils.parseTransaction(rawTx)
-
+function checkBlacklistTx(tx) {
   return (tx.to && _.includes(BLACKLIST, tx.to.toString())) || (tx.from && _.includes(BLACKLIST, tx.from.toString()))
 }
-function checkBlacklist(bundle) {
-  for (let i = 0; i < bundle.length; i++) {
-    const tx = bundle[i]
+
+function checkBlacklist(txs) {
+  for (let i = 0; i < txs.length; i++) {
+    const tx = txs[i]
     if (checkBlacklistTx(tx)) {
       return true
     }
@@ -29,11 +31,10 @@ function checkBlacklist(bundle) {
   return false
 }
 
-function checkDistinctAddresses(bundle) {
+function checkDistinctAddresses(txs) {
   const fromAddresses = {}
   const toAddresses = {}
-  bundle.forEach((rawTx) => {
-    const tx = ethers.utils.parseTransaction(rawTx)
+  txs.forEach((tx) => {
     toAddresses[tx.to && tx.to.toString()] = true
     fromAddresses[tx.from && tx.from.toString()] = true
   })
@@ -41,4 +42,13 @@ function checkDistinctAddresses(bundle) {
   return Object.keys(toAddresses).length > MAX_DISTINCT_TO && Object.keys(fromAddresses).length > MAX_DISTINCT_TO
 }
 
-module.exports = { checkBlacklist, checkDistinctAddresses, MAX_DISTINCT_TO }
+function getParsedTransactions(rawTxs) {
+  const parsedTransactions = []
+  rawTxs.forEach((rawTx) => {
+    TransactionFactory.fromSerializedData(Buffer.from(rawTx, 'hex'), { common: commonOpts })
+    parsedTransactions.push()
+  })
+  return parsedTransactions
+}
+
+module.exports = { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO }

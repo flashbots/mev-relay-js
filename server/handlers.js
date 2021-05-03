@@ -118,12 +118,13 @@ class Handler {
     if (!Array.isArray(bundle)) {
       bundle = bundle.txs
     }
+    const parsedTransactions = getParsedTransactions(bundle)
     try {
-      if (checkBlacklist(bundle)) {
-        console.error(`bundle was interacting with blacklisted address: ${bundle}`)
+      if (checkBlacklist(parsedTransactions)) {
+        console.error(`bundle was interacting with blacklisted address: ${parsedTransactions}`)
         writeError(res, 400, 'blacklisted tx')
         return
-      } else if (checkDistinctAddresses(bundle)) {
+      } else if (checkDistinctAddresses(parsedTransactions)) {
         console.error(`bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         writeError(res, 400, `bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         return

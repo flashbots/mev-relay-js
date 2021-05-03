@@ -1,6 +1,7 @@
 const { TransactionFactory } = require('@ethereumjs/tx')
 const _ = require('lodash')
 const Common = require('@ethereumjs/common').default
+const { arrayify } = require('ethers/lib/utils')
 
 const commonOpts = new Common({ chain: process.env.CHAIN_NAME || 'mainnet' })
 
@@ -45,7 +46,7 @@ function checkDistinctAddresses(txs) {
 function getParsedTransactions(rawTxs) {
   const parsedTransactions = []
   rawTxs.forEach((rawTx) => {
-    TransactionFactory.fromSerializedData(Buffer.from(rawTx, 'hex'), { common: commonOpts })
+    TransactionFactory.fromSerializedData(arrayify(rawTx), { common: commonOpts })
     parsedTransactions.push()
   })
   return parsedTransactions

@@ -1,5 +1,9 @@
 # Changelog
 
+## v3.0.0 (2021-05-06)
+
+- Update for v0.2 core
+
 ## v2.1.0 (2021-03-25)
 
 - Bundles are now required to send at least 1 wei to coinbase

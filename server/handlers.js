@@ -115,7 +115,13 @@ class Handler {
 
   async handleCallBundle(req, res) {
     let bundle = req.body.params[0]
-    if (!Array.isArray(bundle)) {
+    if (Array.isArray(bundle)) {
+      req.body.params = [...req.body.params.slice(0, 3), process.env.COINBASE_ADDRESS, ...req.body.params.slice(3)]
+    } else {
+      req.body.params = [bundle.txs, bundle.blockNumber, bundle.stateBlockNumber, process.env.COINBASE_ADDRESS]
+      if (bundle.timestamp) {
+        req.body.params.push(bundle.timestamp)
+      }
       bundle = bundle.txs
     }
     const parsedTransactions = getParsedTransactions(bundle)
@@ -134,8 +140,6 @@ class Handler {
       writeError(res, 400, 'unable to decode txs')
       return
     }
-
-    req.body.params = [...req.body.params.slice(0, 3), process.env.COINBASE_ADDRESS, ...req.body.params.slice(3)]
 
     request
       .post({

@@ -15,7 +15,7 @@ The relay provides new JSON-RPC methods for interfacing with Flashbots. They are
   "jsonrpc": "2.0",
   "id": 1,
   "method": "eth_sendBundle",
-  "params": [signedTxs, blockNumber, minTimestamp, maxTimestamp]
+  "params": [{ txs, blockNumber, minTimestamp, maxTimestamp, revertingTxHashes }]
 }
 ```
 
@@ -23,6 +23,7 @@ The relay provides new JSON-RPC methods for interfacing with Flashbots. They are
 - **blockNumber**: String, a hex encoded block number for which this bundle is valid on
 - **minTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
 - **maxTimestamp(Optional)**: Number, the minimum timestamp for which this bundle is valid, in seconds since the unix epoch
+- **revertingTxHashes(Optional)**: Array[String], list of tx hashes within the bundle that are allowed to revert
 
 Example:
 
@@ -31,7 +32,7 @@ Example:
   "jsonrpc": "2.0",
   "id": 1,
   "method": "eth_sendBundle",
-  "params": [["0x123abc...", "0x456def..."], "0xb63dcd", 0, 1615920932]
+  "params": [{ "txs": ["0x123abc...", "0x456def..."], "blockNumber": "0xb63dcd", "minTimestamp": 0, "maxTimestamp": 1615920932 }]
 }
 ```
 
@@ -42,12 +43,12 @@ Example:
   "jsonrpc": "2.0",
   "id": 1,
   "method": "eth_callBundle",
-  "params": [signedTxs, targetBlockNumber, stateBlockNumber, timestamp]
+  "params": [{ txs, blockNumber, stateBlockNumber, timestamp }]
 }
 ```
 
 - **signedTxs**: Array[String], A list of signed transactions to execute in an atomic bundle
-- **targetBlockNumber**: String, a hex encoded block number for which this bundle is valid on
+- **blockNumber**: String, a hex encoded block number for which this bundle is valid on
 - **stateBlockNumber**: String, either a hex encoded number or a block tag for which state to base this simulation on. Can use "latest"
 - **timestamp(Optional)**: Number, the timestamp to use for this bundle simulation, in seconds since the unix epoch
 
@@ -58,7 +59,7 @@ Example:
   "jsonrpc": "2.0",
   "id": 1,
   "method": "eth_callBundle",
-  "params": [["0x123abc...", "0x456def..."], "0xb63dcd", "latest", 1615920932]
+  "params": [{ "txs": ["0x123abc...", "0x456def..."], "blockNumber": "0xb63dcd", "stateBlockNumber": "latest", "timestamp": 1615920932 }]
 }
 ```
 

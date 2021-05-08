@@ -7,6 +7,28 @@ const postgres = require('postgres')
 const { writeError } = require('./utils')
 const { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO } = require('./bundle')
 
+function convertBundleFormat(bundle) {
+  if (!Array.isArray(bundle[0])) {
+    // is already v2 bundle, just return
+    return bundle[0]
+  }
+
+  const newBundle = {
+    txs: bundle[0],
+    blockNumber: bundle[1]
+  }
+
+  if (bundle[2]) {
+    newBundle.minTimestamp = bundle[2]
+  }
+
+  if (bundle[3]) {
+    newBundle.maxTimestamp = bundle[3]
+  }
+
+  return newBundle
+}
+
 class Handler {
   constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient) {
     this.MINERS = MINERS
@@ -29,11 +51,10 @@ class Handler {
       return
     }
     this.bundleCounter.inc()
-    const bundle = req.body.params[0]
-    let txs = bundle
-    if (!Array.isArray(txs)) {
-      txs = bundle.txs
-    }
+    const bundle = convertBundleFormat(req.body.params)
+    req.body.params = [bundle]
+
+    const txs = bundle.txs
 
     try {
       const parsedTransactions = getParsedTransactions(txs)
@@ -51,7 +72,7 @@ class Handler {
       writeError(res, 400, 'unable to decode txs')
       return
     }
-    const blockParam = req.body.params[1] || bundle.blockNumber
+    const blockParam = bundle.blockNumber
     if (!blockParam) {
       writeError(res, 400, 'missing block param')
       return
@@ -60,18 +81,20 @@ class Handler {
       writeError(res, 400, 'block param must be a hex int')
       return
     }
-    const minTimestamp = req.body.params[2] || bundle.minTimestamp
+    const minTimestamp = bundle.minTimestamp
     if (minTimestamp && !(minTimestamp > 0)) {
       writeError(res, 400, 'minTimestamp must be an int')
       return
     }
-    const maxTimestamp = req.body.params[3] || bundle.maxTimestamp
+    const maxTimestamp = bundle.maxTimestamp
     if (maxTimestamp && !(maxTimestamp > 0)) {
       writeError(res, 400, 'maxTimestamp must be an int')
       return
     }
 
     const requests = []
+
+    console.log('req.body', req.body)
     this.MINERS.forEach((minerUrl) => {
       try {
         requests.push(

@@ -5,7 +5,7 @@ const AWS = require('aws-sdk')
 const postgres = require('postgres')
 
 const { writeError } = require('./utils')
-const { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO } = require('./bundle')
+const { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO, generateBundleHash } = require('./bundle')
 
 function convertBundleFormat(bundle) {
   if (!Array.isArray(bundle[0])) {
@@ -55,6 +55,7 @@ class Handler {
     req.body.params = [bundle]
 
     const txs = bundle.txs
+    let bundleHash
 
     try {
       const parsedTransactions = getParsedTransactions(txs)
@@ -67,6 +68,7 @@ class Handler {
         writeError(res, 400, `bundle interacted with more than ${MAX_DISTINCT_TO} addresses`)
         return
       }
+      bundleHash = generateBundleHash(parsedTransactions)
     } catch (error) {
       console.error(`error decoding bundle: ${error}`)
       writeError(res, 400, 'unable to decode txs')
@@ -133,7 +135,7 @@ class Handler {
       await this.sqs.sendMessage(params).promise()
     }
     res.setHeader('Content-Type', 'application/json')
-    res.end(`{"jsonrpc":"2.0","id":${req.body.id},"result":null}`)
+    res.end(JSON.stringify({ jsonrpc: '2.0', id: req.body.id, result: { bundleHash } }))
   }
 
   async handleCallBundle(req, res) {

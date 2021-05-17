@@ -1,7 +1,7 @@
 const { TransactionFactory } = require('@ethereumjs/tx')
 const _ = require('lodash')
 const Common = require('@ethereumjs/common').default
-const { arrayify } = require('ethers/lib/utils')
+const { arrayify, keccak256 } = require('ethers/lib/utils')
 
 const commonOpts = new Common({ chain: process.env.CHAIN_NAME || 'mainnet' })
 
@@ -52,4 +52,14 @@ function getParsedTransactions(rawTxs) {
   return parsedTransactions
 }
 
-module.exports = { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO }
+function generateBundleHash(txs) {
+  let hashes = '0x'
+  for (let i = 0; i < txs.length; i++) {
+    const tx = txs[i]
+
+    hashes += tx.hash.slice(2)
+  }
+
+  return keccak256(hashes)
+}
+module.exports = { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO, generateBundleHash }

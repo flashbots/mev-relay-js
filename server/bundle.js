@@ -46,9 +46,7 @@ function checkDistinctAddresses(txs) {
 function getParsedTransactions(rawTxs) {
   const parsedTransactions = []
   rawTxs.forEach((rawTx) => {
-    parsedTransactions.push(
-      TransactionFactory.fromSerializedData(arrayify(rawTx), { common: commonOpts })
-    )
+    parsedTransactions.push(TransactionFactory.fromSerializedData(arrayify(rawTx), { common: commonOpts }))
   })
   return parsedTransactions
 }

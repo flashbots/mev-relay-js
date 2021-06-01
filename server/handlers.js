@@ -10,6 +10,7 @@ const { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTI
 function convertBundleFormat(bundle) {
   if (!Array.isArray(bundle[0])) {
     // is already v2 bundle, just return
+    bundle[0].version = 2
     return bundle[0]
   }
 

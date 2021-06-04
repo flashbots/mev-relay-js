@@ -7,6 +7,7 @@ const postgres = require('postgres')
 const { writeError } = require('./utils')
 const { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO, generateBundleHash } = require('./bundle')
 
+const MIN_GAS_FLOOR = 42000
 function convertBundleFormat(bundle) {
   if (!Array.isArray(bundle[0])) {
     // is already v2 bundle, just return
@@ -167,19 +168,25 @@ class Handler {
       return
     }
 
-    request
-      .post({
-        url: this.SIMULATION_RPC,
+    try {
+      const resp = await fetch(this.SIMULATION_RPC, {
+        method: 'POST',
         body: JSON.stringify(req.body),
         headers: { 'Content-Type': 'application/json' }
       })
-      .on('error', function (error) {
-        Sentry.captureException(error)
-        console.error('Error in proxying callBundle', error)
-        res.writeHead(500)
-        res.end('internal server error')
-      })
-      .pipe(res)
+
+      const result = await resp.json()
+      if (result.result) {
+        if (result.result.totalGasUsed < MIN_GAS_FLOOR) {
+          writeError(res, 400, `bundle used too little gas, must use at least ${MIN_GAS_FLOOR}`)
+        }
+      }
+
+      res.json(result)
+    } catch (error) {
+      console.error(`error simulating bundle: ${error}`)
+      writeError(res, 400, 'failed to simulate')
+    }
   }
 
   async handleUserStats(req, res) {

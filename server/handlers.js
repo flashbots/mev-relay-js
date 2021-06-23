@@ -1,6 +1,5 @@
 const fetch = require('node-fetch')
 const Sentry = require('@sentry/node')
-const request = require('request')
 const AWS = require('aws-sdk')
 const postgres = require('postgres')
 

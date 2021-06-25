@@ -80,27 +80,13 @@ Returns a quick summary of how this searcher is performing in the relay:
 
 ```json
 {
-  "signing_address": "0x123...",
-  "blocks_won_total": 283,
-  "bundles_submitted_total": 8503,
-  "bundles_error_total": 0,
-  "avg_gas_price_gwei": 73.43275884220039,
-  "blocks_won_last_7d": 283,
-  "bundles_submitted_last_7d": 8503,
-  "bundles_error_7d": 0,
-  "avg_gas_price_gwei_last_7d": 73.43275884220039,
-  "blocks_won_last_1d": 83,
-  "bundles_submitted_last_1d": 757,
-  "bundles_error_1d": 0,
-  "avg_gas_price_gwei_last_1d": 227.44116622595683,
-  "blocks_won_last_1h": 0,
-  "bundles_submitted_last_1h": 38,
-  "bundles_error_1h": 0,
-  "avg_gas_price_gwei_last_1h": 103.30447379959334,
-  "blocks_won_last_5m": 0,
-  "bundles_submitted_last_5m": 0,
-  "bundles_error_5m": 0,
-  "avg_gas_price_gwei_last_5m": null
+  "is_high_priority": true,
+  "all_time_miner_payments": "1280749594841588639",
+  "all_time_gas_simulated": "30049470846",
+  "last_7d_miner_payments": "1280749594841588639",
+  "last_7d_gas_simulated": "30049470846",
+  "last_1d_miner_payments": "142305510537954293",
+  "last_1d_gas_simulated": "2731770076"
 }
 ```
 

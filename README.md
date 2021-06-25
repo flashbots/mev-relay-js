@@ -76,7 +76,9 @@ Example:
 
 - **blockNumber**: String, a hex encoded recent block number, in order to prevent replay attacks. Must be within 20 blocks of the current chain tip.
 
-Returns a quick summary of how this searcher is performing in the relay:
+Returns a quick summary of how this searcher is performing in the relay. Currently it is updated once every hour.
+
+Example response:
 
 ```json
 {
@@ -90,8 +92,9 @@ Returns a quick summary of how this searcher is performing in the relay:
 }
 ```
 
-- **blocks_won**: This number represents how many blocks were won by this user, according to the relay. This is **not** how many ended up on chain, this is just what our relay thinks would've won.
-- **avg_gas_price_gwei**: The adjusted gas price, averaged over all submissions by this user.
+- **is_high_priority**: boolean representing if this searcher has a high enough reputation to be in the high priority queue
+- **all_time_miner_payments**: The total amount paid to miners over all time
+- **all_time_gas_simulated**: The total amount of gas simulated across all bundles submitted to the relay. This is the actual gas used in simulations, not gas limit
 
 ## Authentication
 

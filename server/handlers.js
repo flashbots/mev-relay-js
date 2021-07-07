@@ -29,6 +29,23 @@ function convertBundleFormat(bundle) {
 
   return newBundle
 }
+function convertSimBundleFormat(bundle) {
+  if (!Array.isArray(bundle[0])) {
+    return bundle[0]
+  }
+
+  const newBundle = {
+    txs: bundle[0],
+    blockNumber: bundle[1],
+    stateBlockNumber: bundle[2]
+  }
+
+  if (bundle[3]) {
+    newBundle.timestamp = bundle[3]
+  }
+
+  return newBundle
+}
 
 class Handler {
   constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient) {
@@ -140,17 +157,12 @@ class Handler {
   }
 
   async handleCallBundle(req, res) {
-    let bundle = req.body.params[0]
-    if (Array.isArray(bundle)) {
-      req.body.params = [...req.body.params.slice(0, 3), process.env.COINBASE_ADDRESS, ...req.body.params.slice(3)]
-    } else {
-      req.body.params = [bundle.txs, bundle.blockNumber, bundle.stateBlockNumber, process.env.COINBASE_ADDRESS]
-      if (bundle.timestamp) {
-        req.body.params.push(bundle.timestamp)
-      }
-      bundle = bundle.txs
-    }
-    const parsedTransactions = getParsedTransactions(bundle)
+    const bundle = convertSimBundleFormat(req.body.params)
+    bundle.coinbase = process.env.COINBASE_ADDRESS
+    req.body.params = [bundle]
+
+    const txs = bundle.txs
+    const parsedTransactions = getParsedTransactions(txs)
     try {
       if (checkBlacklist(parsedTransactions)) {
         console.error(`bundle was interacting with blacklisted address: ${parsedTransactions}`)

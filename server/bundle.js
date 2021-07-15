@@ -12,8 +12,6 @@ const BLACKLIST = [
   '0x7f367cc41522ce07553e823bf3be79a889debe1b'
 ]
 
-const MAX_DISTINCT_TO = 2
-
 function checkBlacklistTx(tx) {
   return (tx.to && _.includes(BLACKLIST, tx.to.toString())) || (tx.from && _.includes(BLACKLIST, tx.from.toString()))
 }
@@ -27,17 +25,6 @@ function checkBlacklist(txs) {
   }
 
   return false
-}
-
-function checkDistinctAddresses(txs) {
-  const fromAddresses = {}
-  const toAddresses = {}
-  txs.forEach((tx) => {
-    toAddresses[tx.to && tx.to.toString()] = true
-    fromAddresses[tx.from && tx.from.toString()] = true
-  })
-
-  return Object.keys(toAddresses).length > MAX_DISTINCT_TO && Object.keys(fromAddresses).length > MAX_DISTINCT_TO
 }
 
 function getParsedTransactions(rawTxs) {
@@ -56,4 +43,4 @@ function generateBundleHash(txs) {
 
   return keccak256(hashes)
 }
-module.exports = { checkBlacklist, checkDistinctAddresses, getParsedTransactions, MAX_DISTINCT_TO, generateBundleHash }
+module.exports = { checkBlacklist, getParsedTransactions, generateBundleHash }

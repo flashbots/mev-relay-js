@@ -167,7 +167,7 @@ app.use(async (req, res, next) => {
   next()
 })
 
-const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, process.env.POSTGRES_DSN, promClient)
+const handler = new Handler(MINERS, SIMULATION_RPC, SQS_URL, promClient)
 
 app.use(async (req, res) => {
   try {
@@ -179,6 +179,8 @@ app.use(async (req, res) => {
       await handler.handleCallBundle(req, res)
     } else if (req.body.method === 'flashbots_getUserStats') {
       await handler.handleUserStats(req, res)
+    } else if (req.body.method === 'flashbots_getBundleStats') {
+      await handler.handleBundleStats(req, res)
     } else {
       const err = `unknown method: ${req.body.method}`
       Sentry.captureException(err)

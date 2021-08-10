@@ -32,7 +32,6 @@
     "lodash": "^4.17.21",
     "morgan": "^1.10.0",
     "node-fetch": "^2.6.1",
-    "postgres": "^1.0.2",
     "prom-client": "^13.0.0",
     "request": "^2.88.2"
   },

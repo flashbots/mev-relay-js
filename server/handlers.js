@@ -1,7 +1,6 @@
 const fetch = require('node-fetch')
 const Sentry = require('@sentry/node')
 const AWS = require('aws-sdk')
-const postgres = require('postgres')
 
 const { writeError } = require('./utils')
 const { checkBlacklist, getParsedTransactions, generateBundleHash } = require('./bundle')
@@ -48,10 +47,9 @@ function convertSimBundleFormat(bundle) {
 }
 
 class Handler {
-  constructor(MINERS, SIMULATION_RPC, SQS_URL, PSQL_DSN, promClient) {
+  constructor(MINERS, SIMULATION_RPC, SQS_URL, promClient) {
     this.MINERS = MINERS
     this.SIMULATION_RPC = SIMULATION_RPC
-    this.sql = postgres(PSQL_DSN)
 
     this.bundleCounter = new promClient.Counter({
       name: 'bundles',
@@ -107,19 +105,14 @@ class Handler {
       writeError(res, 400, 'maxTimestamp must be an int')
       return
     }
-
-    const requests = []
-
     console.log('req.body', req.body)
     this.MINERS.forEach((minerUrl) => {
       try {
-        requests.push(
-          fetch(`${minerUrl}`, {
-            method: 'post',
-            body: JSON.stringify(req.body),
-            headers: { 'Content-Type': 'application/json' }
-          })
-        )
+        fetch(`${minerUrl}`, {
+          method: 'post',
+          body: JSON.stringify(req.body),
+          headers: { 'Content-Type': 'application/json' }
+        })
       } catch (error) {
         Sentry.captureException(error)
         console.error('Error calling miner', minerUrl, error)
@@ -193,33 +186,11 @@ class Handler {
   }
 
   async handleUserStats(req, res) {
-    if (req.user.keyID) {
-      const stats = await this.sql`
-      select
-          *
-      from
-        stats_by_user_key_id
-      where
-          ${req.user.keyID} = user_key_id`
+    writeError(res, 400, 'flashbots_getUserStats Not implemented on this network')
+  }
 
-      if (stats.length === 0) {
-        return res.json({ error: { message: "stats don't exist for this user", code: -32602 } })
-      }
-      res.json({ result: stats[0] })
-    } else {
-      const stats = await this.sql`
-      select
-          *
-      from
-        stats_by_signing_address
-      where
-          ${req.user.address} = signing_address`
-
-      if (stats.length === 0) {
-        return res.json({ error: { message: "stats don't exist for this user", code: -32602 } })
-      }
-      res.json({ result: stats[0] })
-    }
+  async handleBundleStats(req, res) {
+    writeError(res, 400, 'flashbots_getBundleStats Not implemented on this network')
   }
 }
 

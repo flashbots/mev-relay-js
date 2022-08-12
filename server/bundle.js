@@ -1,21 +1,18 @@
-const { Transaction } = require('@ethereumjs/tx')
-const Common = require('@ethereumjs/common').default
+const { ethers } = require('ethers')
 const _ = require('lodash')
+const { keccak256 } = require('ethers/lib/utils')
 
 const BLACKLIST = []
 
-const MAX_DISTINCT_TO = 2
-
-const commonOpts = new Common({ chain: process.env.CHAIN_NAME || 'mainnet' })
-
-function checkBlacklistTx(rawTx) {
-  const tx = Transaction.fromRlpSerializedTx(rawTx, { common: commonOpts })
-
-  return (tx.to && _.includes(BLACKLIST, tx.to.toString())) || _.includes(BLACKLIST, tx.getSenderAddress().toString())
+function checkBlacklistTx(tx) {
+  return (
+    (tx.to && _.includes(BLACKLIST, tx.to.toString().toLowerCase())) || (tx.from && _.includes(BLACKLIST, tx.from.toString().toLowerCase()))
+  )
 }
-function checkBlacklist(bundle) {
-  for (let i = 0; i < bundle.length; i++) {
-    const tx = bundle[i]
+
+function checkBlacklist(txs) {
+  for (let i = 0; i < txs.length; i++) {
+    const tx = txs[i]
     if (checkBlacklistTx(tx)) {
       return true
     }
@@ -24,16 +21,20 @@ function checkBlacklist(bundle) {
   return false
 }
 
-function checkDistinctAddresses(bundle) {
-  const fromAddresses = {}
-  const toAddresses = {}
-  bundle.forEach((rawTx) => {
-    const tx = Transaction.fromRlpSerializedTx(rawTx, { common: commonOpts })
-    toAddresses[tx.to && tx.to.toString()] = true
-    fromAddresses[tx.getSenderAddress() && tx.getSenderAddress().toString()] = true
+function getParsedTransactions(rawTxs) {
+  return rawTxs.map((rawTx) => {
+    return ethers.utils.parseTransaction(rawTx)
   })
-
-  return Object.keys(toAddresses).length > MAX_DISTINCT_TO && Object.keys(fromAddresses).length > MAX_DISTINCT_TO
 }
 
-module.exports = { checkBlacklist, checkDistinctAddresses, MAX_DISTINCT_TO }
+function generateBundleHash(txs) {
+  let hashes = '0x'
+  for (let i = 0; i < txs.length; i++) {
+    const tx = txs[i]
+
+    hashes += tx.hash.slice(2)
+  }
+
+  return keccak256(hashes)
+}
+module.exports = { checkBlacklist, getParsedTransactions, generateBundleHash }
